@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Employee Dashboard Layout -->
+    <template id="employee_dashboard_layout" name="Employee Dashboard">
+        <t t-call="portal.portal_layout">
+            <t t-set="additional_title">Employee Dashboard</t>
+
+            <div class="ess-dashboard-layout">
+                <!-- ====== LEFT SIDEBAR: User Profile ====== -->
+                <div class="ess-sidebar">
+                    <t t-if="is_employee">
+                        <div class="ess-profile-card">
+                            <div class="ess-profile-avatar-wrap">
+                                <t t-if="employee.image_128">
+                                    <img t-attf-src="/web/image/hr.employee/{{ employee.id }}/image_128"
+                                         class="ess-profile-avatar" t-att-alt="employee.name"/>
+                                </t>
+                                <t t-else="">
+                                    <div class="ess-profile-avatar-fallback">
+                                        <i class="fa fa-user fa-3x"/>
+                                    </div>
+                                </t>
+                            </div>
+                            <div class="ess-profile-name"><t t-esc="employee.name"/></div>
+                            <div class="ess-profile-job">
+                                <t t-esc="employee.job_title or (employee.job_id and employee.job_id.name) or 'Employee'"/>
+                            </div>
+                            
+                            <div class="ess-profile-joined mt-3 mb-4">
+                                Joined <strong class="text-dark"><t t-esc="employee.create_date.strftime('%b %Y') if employee.create_date else 'Recently'"/></strong>
+                            </div>
+
+                            <div class="ess-profile-contact-list">
+                                <t t-if="employee.work_phone">
+                                    <div class="ess-contact-item">
+                                        <i class="fa fa-phone"/>
+                                        <span><t t-esc="employee.work_phone"/></span>
+                                    </div>
+                                </t>
+                                <t t-if="employee.work_email">
+                                    <div class="ess-contact-item">
+                                        <i class="fa fa-envelope"/>
+                                        <span><t t-esc="employee.work_email"/></span>
+                                    </div>
+                                </t>
+                                <t t-if="employee.address_id">
+                                    <div class="ess-contact-item ess-address-item">
+                                        <i class="fa fa-home mt-1"/>
+                                        <div class="ess-address-block">
+                                            Address: <t t-esc="employee.address_id.street"/><br/>
+                                            <t t-if="employee.address_id.city"><t t-esc="employee.address_id.city"/><br/></t>
+                                            <t t-if="employee.address_id.state_id"><t t-esc="employee.address_id.state_id.name"/> <t t-esc="employee.address_id.country_id.code"/><br/></t>
+                                            <t t-if="employee.address_id.zip"><t t-esc="employee.address_id.zip"/><br/></t>
+                                            <t t-if="employee.address_id.country_id"><t t-esc="employee.address_id.country_id.name"/></t>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- New Attendance Widget (Inside Profile Card) -->
+                            <div class="ess-attendance-widget mt-4" style="background: linear-gradient(135deg, #2a1158 0%, #4c1d95 100%); color: white; border-radius: 12px; padding: 20px 15px; text-align: center; box-shadow: 0 5px 15px rgba(76,29,149,0.15);">
+                                
+                                <!-- Big Clock -->
+                                <div id="ess_live_clock" style="font-size: 2.2rem; font-weight: 700; color: white; line-height: 1; margin-bottom: 5px; text-shadow: 0 0 10px rgba(255,255,255,0.3);">
+                                    00:00:00
+                                </div>
+                                
+                                <!-- Date -->
+                                <div id="ess_live_date" style="color: rgba(255,255,255,0.7); font-size: 0.8rem; margin-bottom: 15px;">
+                                    Loading Date...
+                                </div>
+
+                                <!-- Status Badge -->
+                                <div class="mb-3">
+                                    <t t-if="is_checked_in">
+                                        <span style="display: inline-block; background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                            <i class="fa fa-circle" style="font-size: 10px; vertical-align: middle; margin-right: 4px;"/> Checked In
+                                        </span>
+                                    </t>
+                                    <t t-else="">
+                                        <span style="display: inline-block; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                            <i class="fa fa-circle" style="font-size: 10px; vertical-align: middle; margin-right: 4px; color: rgba(255,255,255,0.5);"/> Not Checked In
+                                        </span>
+                                    </t>
+                                </div>
+
+                                <!-- Action Button -->
+                                <form action="/my/attendance/toggle" method="post" class="mb-3 w-100">
+                                    <input type="hidden" name="csrf_token" t-att-value="csrf_token"/>
+                                    <button type="submit" class="btn btn-block shadow-sm" style="background: white; color: #4c1d95; border-radius: 10px; padding: 10px; font-weight: 700; font-size: 0.95rem; border: none; transition: all 0.2s;">
+                                        <t t-if="is_checked_in">
+                                            <i class="fa fa-sign-out mr-2" style="font-size: 1.1rem; vertical-align: middle; color: #4c1d95;"/> Check Out
+                                        </t>
+                                        <t t-else="">
+                                            <i class="fa fa-hand-pointer-o mr-2" style="font-size: 1.1rem; vertical-align: middle; color: #4c1d95;"/> Check In
+                                        </t>
+                                    </button>
+                                </form>
+
+                                <!-- Bottom Stats Grid -->
+                                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; display: flex; justify-content: space-between; align-items: stretch; text-align: center;">
+                                    
+                                    <!-- Check In Time -->
+                                    <div style="flex: 1; border-right: 1px solid rgba(255,255,255,0.1);">
+                                        <i class="fa fa-sign-in mb-1" style="color: rgba(255,255,255,0.7); font-size: 0.9rem;"/>
+                                        <div style="font-weight: 700; font-size: 1rem; color: white;">
+                                            <t t-if="is_checked_in and check_in_time"><t t-esc="check_in_time"/></t>
+                                            <t t-else="">--:--</t>
+                                        </div>
+                                        <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Check In</div>
+                                    </div>
+                                    
+                                    <!-- Today Hrs -->
+                                    <div style="flex: 1; border-right: 1px solid rgba(255,255,255,0.1);">
+                                        <i class="fa fa-hourglass-half mb-1" style="color: rgba(255,255,255,0.7); font-size: 0.9rem;"/>
+                                        <div id="ess_hours_display" style="font-weight: 700; font-size: 1rem; color: white;">
+                                            <t t-esc="hours_today"/>
+                                        </div>
+                                        <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Today Hrs</div>
+                                    </div>
+
+                                    <!-- View History -->
+                                    <a href="/my/attendance/history" style="flex: 1; display: block; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                        <i class="fa fa-history mb-1" style="color: rgba(255,255,255,0.7); font-size: 0.9rem;"/>
+                                        <div style="font-weight: 700; font-size: 1rem; color: white;">View</div>
+                                        <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">History</div>
+                                    </a>
+
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="ess-profile-card">
+                            <div class="ess-profile-name"><t t-esc="user.name"/></div>
+                            <div class="ess-profile-job">Customer</div>
+                            <div class="ess-profile-contact-list mt-3">
+                                <t t-if="user.email">
+                                    <div class="ess-contact-item">
+                                        <i class="fa fa-envelope"/>
+                                        <span><t t-esc="user.email"/></span>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- ====== MAIN CONTENT AREA ====== -->
+                <div class="ess-main-content">
+                    
+                    <!-- Tier 1: Action Cards -->
+                    <div class="ess-tier1-cards">
+                        <t t-if="is_employee">
+                            <!-- 1. Projects -->
+                            <a href="/my/projects" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #f97316;">
+                                    <i class="fa fa-folder-open fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #f97316;">Projects</div>
+                                    <div class="ess-split-value text-dark"><i class="fa fa-tasks text-muted" style="font-size:16px;"/></div>
+                                </div>
+                            </a>
+                            
+                            <!-- 2. Timesheets -->
+                            <a href="/my/timesheets" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #3b82f6;">
+                                    <i class="fa fa-clock-o fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #3b82f6;">Timesheets</div>
+                                    <div class="ess-split-value text-dark"><i class="fa fa-clock-o text-muted" style="font-size:16px;"/></div>
+                                </div>
+                            </a>
+
+                            
+                            <a href="/my/directory" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #8b5cf6;">
+                                    <i class="fa fa-users fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #8b5cf6;">Directory</div>
+                                    <div class="ess-split-value text-dark"><i class="fa fa-search text-muted" style="font-size:16px;"/></div>
+                                </div>
+                            </a>
+                            
+                            <!-- 5. Approvals (Only for Approvers) -->
+                            <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_approvals')">
+                                <a href="/my/approvals" class="ess-split-card">
+                                    <div class="ess-split-icon-area" style="background-color: #ef4444;">
+                                        <i class="fa fa-check-square-o fa-2x text-white"/>
+                                    </div>
+                                    <div class="ess-split-text-area">
+                                        <div class="ess-split-title" style="color: #ef4444;">Approvals</div>
+                                        <div class="ess-split-value text-dark"><i class="fa fa-list text-muted" style="font-size:16px;"/></div>
+                                    </div>
+                                </a>
+                            </t>
+
+                            
+
+                        </t>
+
+                        <!-- Standard Portal Cards for Customer Only (Invoices, Addresses, Security) -->
+                        <t t-if="not is_employee">
+                            <a href="/my/projects" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #f97316;">
+                                    <i class="fa fa-folder-open fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #f97316;">Projects</div>
+                                </div>
+                            </a>
+                            <a href="/my/tasks" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #8b5cf6;">
+                                    <i class="fa fa-tasks fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #8b5cf6;">Tasks</div>
+                                </div>
+                            </a>
+                            <a href="/my/invoices" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #dc2626;">
+                                    <i class="fa fa-file-text-o fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #dc2626;">Invoices</div>
+                                </div>
+                            </a>
+                            <a href="/my/account" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #d97706;">
+                                    <i class="fa fa-user-circle fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #d97706;">My Account</div>
+                                </div>
+                            </a>
+                            <a href="/my/security" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #0284c7;">
+                                    <i class="fa fa-shield fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #0284c7;">Security</div>
+                                </div>
+                            </a>
+                        </t>
+                    </div>
+
+                    <!-- Middle Grid: Team Task Deadlines & Team Leaves -->
+                    <t t-if="is_employee">
+                        <div class="row mt-4">
+                            <!-- Left: Team Task Deadlines -->
+                            <div class="col-lg-6 col-12">
+                                <div class="card border-0 shadow-sm ess-widget-card mb-4" style="border-radius: 8px; background: #fff; height: calc(100% - 1.5rem);">
+                                    <div class="card-header bg-white border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0 font-weight-bold text-dark text-uppercase" style="font-size: 0.95rem; letter-spacing: 0.5px;"><t t-esc="tasks_heading"/></h5>
+                                    </div>
+                                    <div class="card-body px-4 pt-2 pb-4">
+                                        <div class="table-responsive" style="max-height: 320px; overflow-y: auto; scrollbar-width: thin;">
+                                            <table class="table table-borderless table-hover mb-0" style="font-size: 0.9rem;">
+                                                <thead style="border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 0.75rem; position: sticky; top: 0; background: #fff; z-index: 2;">
+                                                    <tr>
+                                                        <th class="py-3 px-2">Task</th>
+                                                        <th class="py-3 px-2">Project</th>
+                                                        <th class="py-3 px-2">Assigned To</th>
+                                                        <th class="py-3 px-2">Deadline</th>
+                                                        <th class="py-3 px-2 text-right">State</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-if="hierarchy_tasks">
+                                                        <t t-foreach="hierarchy_tasks" t-as="task">
+                                                            <tr style="border-bottom: 1px solid #f1f5f9; cursor: pointer;" t-attf-onclick="window.location='/my/tasks/#{task.id}'">
+                                                                <td class="py-3 px-2 font-weight-bold text-dark"><t t-esc="task.name"/></td>
+                                                                <td class="py-3 px-2 text-muted"><t t-esc="task.project_id.name if task.project_id else '-'"/></td>
+                                                                <td class="py-3 px-2">
+                                                                    <div class="d-flex align-items-center">
+                                                                        <t t-foreach="task.user_ids[:3]" t-as="user_assign">
+                                                                            <img t-attf-src="/web/image/res.users/{{ user_assign.id }}/avatar_128" 
+                                                                                 style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: -8px; border: 2px solid #fff;" 
+                                                                                 t-att-title="user_assign.name"/>
+                                                                        </t>
+                                                                        <t t-if="len(task.user_ids) > 3">
+                                                                            <span style="width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; border: 2px solid #fff; z-index: 1;">+<t t-esc="len(task.user_ids) - 3"/></span>
+                                                                        </t>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="py-3 px-2">
+                                                                    <t t-if="task.date_deadline">
+                                                                        <t t-esc="task.date_deadline.strftime('%d %b %Y')"/>
+                                                                    </t>
+                                                                    <t t-else="">-</t>
+                                                                </td>
+                                                                <td class="py-3 px-2 text-right">
+                                                                    <span class="badge badge-pill" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 6px 12px; font-weight: 600;">
+                                                                        <t t-esc="task.stage_id.name if task.stage_id else (task.state or 'New')"/>
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        </t>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <tr>
+                                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                                <i class="fa fa-check-circle fa-2x mb-2" style="color: #10b981; opacity: 0.5;"></i>
+                                                                <div>No tasks found!</div>
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right: In-Progress Tasks -->
+                            <div class="col-lg-6 col-12">
+                                <div class="card border-0 shadow-sm ess-widget-card mb-4" style="border-radius: 8px; background: #fff; height: calc(100% - 1.5rem);">
+                                    <div class="card-header bg-white border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0 font-weight-bold text-dark text-uppercase" style="font-size: 0.95rem; letter-spacing: 0.5px;">In-Progress Tasks</h5>
+                                    </div>
+                                    <div class="card-body px-4 pt-2 pb-4">
+                                        <div class="table-responsive" style="max-height: 320px; overflow-y: auto; scrollbar-width: thin;">
+                                            <table class="table table-borderless table-hover mb-0" style="font-size: 0.9rem;">
+                                                <thead style="border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 0.75rem; position: sticky; top: 0; background: #fff; z-index: 2;">
+                                                    <tr>
+                                                        <th class="py-3 px-2">Task</th>
+                                                        <th class="py-3 px-2">Project</th>
+                                                        <th class="py-3 px-2">Assigned To</th>
+                                                        <th class="py-3 px-2">Deadline</th>
+                                                        <th class="py-3 px-2 text-right">State</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-if="in_progress_tasks">
+                                                        <t t-foreach="in_progress_tasks" t-as="task">
+                                                            <tr style="border-bottom: 1px solid #f1f5f9; cursor: pointer;" t-attf-onclick="window.location='/my/tasks/#{task.id}'">
+                                                                <td class="py-3 px-2 font-weight-bold text-dark"><t t-esc="task.name"/></td>
+                                                                <td class="py-3 px-2 text-muted"><t t-esc="task.project_id.name if task.project_id else '-'"/></td>
+                                                                <td class="py-3 px-2">
+                                                                    <div class="d-flex align-items-center">
+                                                                        <t t-foreach="task.user_ids[:3]" t-as="user_assign">
+                                                                            <img t-attf-src="/web/image/res.users/{{ user_assign.id }}/avatar_128" 
+                                                                                 style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: -8px; border: 2px solid #fff;" 
+                                                                                 t-att-title="user_assign.name"/>
+                                                                        </t>
+                                                                        <t t-if="len(task.user_ids) > 3">
+                                                                            <span style="width: 24px; height: 24px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; border: 2px solid #fff; z-index: 1;">+<t t-esc="len(task.user_ids) - 3"/></span>
+                                                                        </t>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="py-3 px-2">
+                                                                    <t t-if="task.date_deadline">
+                                                                        <t t-esc="task.date_deadline.strftime('%d %b %Y')"/>
+                                                                    </t>
+                                                                    <t t-else="">-</t>
+                                                                </td>
+                                                                <td class="py-3 px-2 text-right">
+                                                                    <span class="badge badge-pill" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 6px 12px; font-weight: 600;">
+                                                                        <t t-esc="task.stage_id.name if task.stage_id else (task.state or 'New')"/>
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        </t>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <tr>
+                                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                                <i class="fa fa-check-circle fa-2x mb-2" style="color: #10b981; opacity: 0.5;"></i>
+                                                                <div>No in-progress tasks!</div>
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </t>
+
+                    <!-- Tier 2: Bottom Widgets (Birthdays, Events, Announcements) -->
+                    <t t-if="is_employee">
+                        <div class="card border-0 shadow-sm mt-4" style="border-radius: 8px; overflow: hidden; background: #fff;">
+                            <div class="row m-0">
+                                
+                                <!-- 1. Upcoming Birthdays -->
+                                <div class="col-lg-4 col-md-12 p-4 text-center" style="border-right: 1px solid #e5e7eb;">
+                                    <h6 class="font-weight-bold text-dark mb-4" style="font-size: 0.95rem;">Upcoming Birthdays</h6>
+                                    
+                                    <t t-if="upcoming_birthdays">
+                                        <div style="max-height: 320px; overflow-y: auto; scrollbar-width: thin; padding-right: 5px;">
+                                            <t t-foreach="upcoming_birthdays" t-as="bday">
+                                                <div class="d-flex align-items-center justify-content-center mb-3">
+                                                    <img t-attf-src="{{ bday.get('image_url', '/web/static/img/placeholder.png') }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 15px;"/>
+                                                    <div class="text-left">
+                                                        <div class="font-weight-bold text-dark" style="font-size: 0.85rem;"><t t-esc="bday.get('name')"/></div>
+                                                        <div class="text-muted" style="font-size: 0.75rem;"><t t-esc="bday.get('date')"/></div>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="py-3">
+                                            <div style="font-size: 3rem; margin-bottom: 10px;">🎂</div>
+                                            <div class="text-muted font-weight-bold" style="font-size: 0.9rem;">No Upcoming Birthdays</div>
+                                        </div>
+                                    </t>
+                                </div>
+                                
+                                <!-- 2. Upcoming Events -->
+                                <div class="col-lg-4 col-md-12 p-4" style="border-right: 1px solid #e5e7eb;">
+                                    <h6 class="font-weight-bold text-dark mb-4 text-center" style="font-size: 0.95rem;">Upcoming Events</h6>
+                                    
+                                    <t t-if="upcoming_events">
+                                        <div class="text-left px-2" style="max-height: 320px; overflow-y: auto; scrollbar-width: thin; padding-right: 5px;">
+                                            <t t-foreach="upcoming_events" t-as="ev">
+                                                <div class="mb-3">
+                                                    <div class="font-weight-bold text-dark mb-1" style="font-size: 0.85rem;"><t t-esc="ev.get('name')"/></div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;"><t t-esc="ev.get('date_str')"/></div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;"><t t-esc="ev.get('venue')"/></div>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="text-center py-3">
+                                            <div style="font-size: 3rem; margin-bottom: 10px;">📅</div>
+                                            <div class="text-muted font-weight-bold" style="font-size: 0.9rem;">No Upcoming Events</div>
+                                        </div>
+                                    </t>
+                                </div>
+                                
+                                <!-- 3. Announcements -->
+                                <div class="col-lg-4 col-md-12 p-4 text-center">
+                                    <h6 class="font-weight-bold text-dark mb-4" style="font-size: 0.95rem;">Announcements</h6>
+                                    
+                                    <t t-if="announcements">
+                                        <div class="text-left px-2" style="max-height: 320px; overflow-y: auto; scrollbar-width: thin; padding-right: 5px;">
+                                            <t t-foreach="announcements" t-as="ann">
+                                                <div class="mb-3 pb-2 border-bottom">
+                                                    <div class="font-weight-bold text-dark mb-1" style="font-size: 0.85rem;"><t t-esc="ann.name"/></div>
+                                                    <div class="text-muted mb-1" style="font-size: 0.7rem;"><t t-esc="ann.date.strftime('%d %b %Y') if ann.date else ''"/></div>
+                                                    <div class="text-muted" style="font-size: 0.75rem;"><t t-raw="ann.content"/></div>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="py-3">
+                                            <div style="font-size: 3rem; margin-bottom: 10px;">📢</div>
+                                            <div class="text-muted font-weight-bold" style="font-size: 0.9rem;">No Announcements</div>
+                                        </div>
+                                    </t>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </t>
+
+                </div><!-- /ess-main-content -->
+            </div><!-- /ess-dashboard-layout -->
+
+            <!-- Inline Script -->
+            <script type="text/javascript">
+                (function() {
+                    function pad(n) { return n >= 10 ? String(n) : '0' + String(n); }
+                    function hms(s) {
+                        s = s > 0 ? s : 0;
+                        return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
+                    }
+                    
+                    var isCheckedIn = <t t-esc="'true' if is_checked_in else 'false'"/>;
+                    var checkInUnix = <t t-if="is_checked_in"><t t-esc="check_in_unix"/></t><t t-else="">0</t>;
+                    
+                    function updateClock() {
+                        var now = new Date();
+                        var clockEl = document.getElementById('ess_live_clock');
+                        
+                        if (clockEl) {
+                            if (isCheckedIn &amp;&amp; checkInUnix > 0) {
+                                // Show elapsed time since check-in
+                                var elapsed = Math.floor(Date.now() / 1000) - checkInUnix;
+                                clockEl.innerHTML = hms(elapsed);
+                            } else {
+                                // Show current wall clock time
+                                var h = pad(now.getHours());
+                                var m = pad(now.getMinutes());
+                                var s = pad(now.getSeconds());
+                                clockEl.innerHTML = h + ':' + m + ':' + s;
+                            }
+                        }
+                        
+                        var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        var dateEl = document.getElementById('ess_live_date');
+                        if (dateEl) {
+                            dateEl.innerHTML = days[now.getDay()] + ', ' + pad(now.getDate()) + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+                        }
+                    }
+
+                    <t t-if="is_checked_in">
+                    var ELAPSED_SEC_INITIAL = <t t-esc="elapsed_seconds"/>;
+                    var HOURS_COMPLETED = parseFloat('<t t-esc="hours_today"/>') - (ELAPSED_SEC_INITIAL / 3600.0);
+                    
+                    function updateTimer() {
+                        var elapsed_sec = Math.floor(Date.now() / 1000) - checkInUnix;
+                        var total_hours = HOURS_COMPLETED + (elapsed_sec / 3600.0);
+                        var el = document.getElementById('ess_hours_display');
+                        if (el) el.innerHTML = total_hours.toFixed(2);
+                    }
+                    </t>
+
+                    document.addEventListener('DOMContentLoaded', function() {
+                        updateClock();
+                        setInterval(updateClock, 1000);
+                        
+                        <t t-if="is_checked_in">
+                        updateTimer();
+                        setInterval(updateTimer, 10000);
+                        </t>
+                    });
+                })();
+            </script>
+        </t>
+    </template>
+
+    <!-- Attendance History - Premium themed -->
+    <template id="portal_attendance_history" name="Attendance History">
+        <t t-call="portal.portal_layout">
+
+            <!-- Purple gradient hero header -->
+            <div class="ess-hist-hero">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-history"/> Attendance History
+                        </div>
+                        <div class="ess-hist-hero-sub">Your complete check-in / check-out log</div>
+                    </div>
+                    <a href="/my/dashboard" class="ess-hist-back-btn">
+                        <i class="fa fa-arrow-left"/> Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div class="ess-hist-body">
+
+                <div class="ess-hist-table-wrap">
+                    <table class="ess-hist-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fa fa-sign-in"/> Check In</th>
+                                <th><i class="fa fa-sign-out"/> Check Out</th>
+                                <th><i class="fa fa-clock-o"/> Worked Hrs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-if="attendances">
+                                <t t-foreach="attendances" t-as="att">
+                                    <tr>
+                                        <td class="ess-td-time"><t t-esc="att['check_in']"/></td>
+                                        <td>
+                                            <t t-if="att['check_out'] == 'Ongoing'">
+                                                <span class="ess-badge-ongoing">
+                                                    <span class="ess-dot-pulse"/> Ongoing
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <t t-esc="att['check_out']"/>
+                                            </t>
+                                        </td>
+                                        <td>
+                                            <span class="ess-hrs-val"><t t-esc="att['worked_hours']"/></span>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <tr>
+                                    <td colspan="3" class="ess-empty-row">
+                                        <i class="fa fa-inbox fa-2x"/>
+                                        <div>No attendance records found.</div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <t t-if="total_pages and total_pages > 1">
+                    <div class="ess-pagination">
+                        <t t-if="page > 1">
+                            <a t-attf-href="/my/attendance/history?page={{ page - 1 }}"
+                               class="ess-page-btn">
+                                <i class="fa fa-chevron-left"/> Prev
+                            </a>
+                        </t>
+                        <span class="ess-page-info">
+                            Page <strong><t t-esc="page"/></strong> of <t t-esc="total_pages"/>
+                        </span>
+                        <t t-if="page &lt; total_pages">
+                            <a t-attf-href="/my/attendance/history?page={{ page + 1 }}"
+                               class="ess-page-btn">
+                                Next <i class="fa fa-chevron-right"/>
+                            </a>
+                        </t>
+                    </div>
+                </t>
+
+            </div>
+
+        </t>
+    </template>
+
+    <!-- Error Template -->
+    <template id="portal_no_employee" name="No Employee Linked">
+        <t t-call="portal.portal_layout">
+            <div class="ess-hist-hero">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">Employee Self Service</div>
+                        <div class="ess-hist-hero-sub">Portal access for employees</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ess-hist-body">
+                <div class="ess-no-emp-card">
+                    <i class="fa fa-user-times fa-3x"/>
+                    <h4>No Employee Record Found</h4>
+                    <p>Your portal account is not linked to an employee profile.<br/>Please contact your HR administrator.</p>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

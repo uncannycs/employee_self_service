@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add Timesheet Tab to Approvals Submenu -->
+    <template id="approvals_submenu_timesheet" inherit_id="ucs_portal_self_service.approvals_submenu">
+        <xpath expr="." position="inside">
+            <style>
+                .ess-sub-nav-item.active {
+                    border-bottom: 3px solid #4c1d95 !important;
+                }
+                .ess-sub-nav-item:not(.active) {
+                    border-bottom: 3px solid transparent !important;
+                }
+            </style>
+            <script type="text/javascript">
+                document.addEventListener("DOMContentLoaded", function() {
+                    var tabLinks = document.querySelectorAll('.ess-sub-nav-item[data-bs-toggle="tab"]');
+                    tabLinks.forEach(function(link) {
+                        link.addEventListener('shown.bs.tab', function (e) {
+                            var targetId = e.target.getAttribute('href').replace('#', '');
+                            var url = new URL(window.location.href);
+                            url.searchParams.set('tab', targetId);
+                            window.history.replaceState(null, '', url.toString());
+                        });
+                    });
+                });
+            </script>
+            <t t-if="request.env.user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_manager')">
+                <li class="nav-item" role="presentation">
+                    <a href="#timesheet" t-att-class="'ess-sub-nav-item nav-link ' + ('active' if request.params.get('tab') == 'timesheet' else '')" data-bs-toggle="tab" role="tab"
+                       style="background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Timesheets
+                    </a>
+                </li>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Add Timesheet Tab Content -->
+    <template id="approvals_content_timesheet" inherit_id="ucs_portal_self_service.approvals_content">
+        <xpath expr="." position="inside">
+            <t t-if="request.env.user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_manager')">
+                <div t-att-class="'tab-pane fade ' + ('show active' if request.params.get('tab') == 'timesheet' else '')" id="timesheet" role="tabpanel">
+                    
+                    <t t-if="not filter_employees">
+                        <div class="text-center py-5">
+                            <i class="fa fa-calendar-check-o text-muted mb-3" style="font-size: 4rem; opacity: 0.5;"></i>
+                            <h4 class="text-muted">No Timesheets to Approve</h4>
+                            <p class="text-muted">You're all caught up!</p>
+                        </div>
+                    </t>
+                    
+                    <t t-if="filter_employees">
+                        <div class="mb-2 px-3 pt-3">
+                            <form method="get" action="/my/approvals" class="d-flex justify-content-between align-items-center flex-wrap">
+                                <input type="hidden" name="tab" value="timesheet"/>
+                                
+                                <!-- Filters -->
+                                <div class="d-flex gap-2 align-items-center mb-2">
+                                    <span class="text-muted small fw-bold me-1"><i class="fa fa-filter"></i> Filters:</span>
+                                    <select name="filter_employee" class="form-select form-select-sm" onchange="this.form.submit()" style="max-width: 150px;">
+                                        <option value="">All Employees</option>
+                                        <t t-foreach="filter_employees" t-as="emp">
+                                            <option t-att-value="emp.id" t-att-selected="str(emp.id) == current_filter_employee"><t t-esc="emp.name"/></option>
+                                        </t>
+                                    </select>
+                                    <select name="filter_project" class="form-select form-select-sm" onchange="this.form.submit()" style="max-width: 150px;">
+                                        <option value="">All Projects</option>
+                                        <t t-foreach="filter_projects" t-as="proj">
+                                            <option t-att-value="proj.id" t-att-selected="str(proj.id) == current_filter_project"><t t-esc="proj.name"/></option>
+                                        </t>
+                                    </select>
+                                    <input type="date" name="filter_date_from" class="form-control form-control-sm" t-att-value="current_filter_date_from" onchange="this.form.submit()" style="max-width: 130px;" title="From Date"/>
+                                    <input type="date" name="filter_date_to" class="form-control form-control-sm" t-att-value="current_filter_date_to" onchange="this.form.submit()" style="max-width: 130px;" title="To Date"/>
+                                    
+                                    <a t-if="current_filter_employee or current_filter_project or current_filter_date_from or current_filter_date_to" 
+                                       href="#" onclick="
+                                            this.form.filter_employee.value='';
+                                            this.form.filter_project.value='';
+                                            this.form.filter_date_from.value='';
+                                            this.form.filter_date_to.value='';
+                                            this.form.submit(); return false;
+                                       " class="btn btn-sm btn-outline-danger" title="Clear Filters">
+                                        <i class="fa fa-times"></i>
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                        <t t-if="not timesheets">
+                            <div class="alert alert-info mx-3 mt-3 text-center" role="alert">
+                                <i class="fa fa-info-circle me-2"></i> No timesheets found matching your filters.
+                            </div>
+                        </t>
+                        <t t-if="timesheets">
+                            <div class="ess-hist-table-wrap">
+                                <table class="ess-hist-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Date</th>
+                                            <th>Project</th>
+                                            <th>Task</th>
+                                            <th>Hours</th>
+                                            <th>Description</th>
+                                            <th class="text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="grouped_timesheets" t-as="group_data">
+                                            <t t-set="group_key" t-value="group_data[0]"/>
+                                            <t t-set="ts_lines" t-value="group_data[1]"/>
+                                            
+                                            <!-- Group Header -->
+                                            <tr class="table-light font-weight-bold" style="background: var(--ess-light); color: var(--ess-primary);">
+                                                <td colspan="7">
+                                                    <div class="d-flex align-items-center">
+                                                        <t t-if="group_key.image_128">
+                                                            <img t-att-src="image_data_uri(group_key.image_128)" class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Employee"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <div class="rounded-circle mr-2 d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 24px; height: 24px;">
+                                                                <i class="fa fa-user" style="font-size: 10px;"></i>
+                                                            </div>
+                                                        </t>
+                                                        <span t-esc="group_key.name"/>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            
+                                            <!-- Timesheet Rows -->
+                                            <t t-foreach="ts_lines" t-as="ts">
+                                                <tr>
+                                                    <td>
+                                                        <t t-if="ts.employee_id.image_128">
+                                                            <img t-att-src="image_data_uri(ts.employee_id.image_128)" class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Employee"/>
+                                                        </t>
+                                                        <span t-esc="ts.employee_id.name"/>
+                                                    </td>
+                                                    <td><t t-esc="ts.date"/></td>
+                                                    <td>
+                                                        <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="ess-hrs-val"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></span>
+                                                    </td>
+                                                    <td><t t-esc="ts.name"/></td>
+                                                    <td class="text-end">
+                                                        <a t-attf-href="/my/approvals/timesheet/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">
+                                                            <i class="fa fa-check"></i> Approve
+                                                        </a>
+                                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" t-attf-data-bs-target="#refuseModal_{{ ts.id }}" title="Refuse">
+                                                            <i class="fa fa-times"></i> Refuse
+                                                        </button>
+                                                        
+                                                        <!-- Refuse Modal -->
+                                                        <div class="modal fade" t-attf-id="refuseModal_{{ ts.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                                            <div class="modal-dialog" role="document">
+                                                                <div class="modal-content text-start">
+                                                                    <form t-attf-action="/my/approvals/timesheet/refuse/{{ ts.id }}" method="post">
+                                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                                        
+                                                                        <div class="modal-header">
+                                                                            <h5 class="modal-title">Refuse Timesheet</h5>
+                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                        </div>
+                                                                        <div class="modal-body">
+                                                                            <p>Are you sure you want to refuse this timesheet for <b t-esc="ts.employee_id.name"/>?</p>
+                                                                            <div class="form-group">
+                                                                                <label>Reason for Refusal</label>
+                                                                                <textarea class="form-control" name="reason" required="1" rows="3" placeholder="Please provide a reason for refusing this timesheet..."></textarea>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="modal-footer">
+                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                            <button type="submit" class="btn btn-danger">Confirm Refusal</button>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                    </t>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>

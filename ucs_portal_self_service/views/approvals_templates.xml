@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_my_approvals" name="My Approvals">
+        <t t-call="portal.portal_layout">
+            <t t-set="additional_title">Approvals</t>
+
+            <div class="ess-portal-fullwidth">
+                <div class="ess-hist-hero" style="margin-top: 0;">
+                    <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-check-square-o"/> Approvals
+                        </div>
+                        <div class="ess-hist-hero-sub">Pending items requiring your approval</div>
+                    </div>
+                    <a href="/my/dashboard" class="ess-hist-back-btn">
+                        <i class="fa fa-arrow-left"/> Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sub-navigation Menu -->
+            <div class="ess-sub-nav bg-white shadow-sm border-bottom" style="padding: 0 20px; display: flex; overflow-x: auto; white-space: nowrap;">
+                <ul class="nav" id="approvalsTab" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; width: 100%;">
+                    <t t-call="ucs_portal_self_service.approvals_submenu"/>
+                </ul>
+            </div>
+
+            <div class="ess-hist-body pt-4">
+                <!-- Global Error Toast -->
+                <t t-if="error_message">
+                    <div class="position-fixed" style="z-index: 1055; right: 20px; top: 20px;">
+                        <div class="toast align-items-center text-white bg-danger border-0 show shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 8px;">
+                            <div class="d-flex justify-content-between">
+                                <div class="toast-body font-weight-bold px-4 py-3" style="font-size: 1rem;">
+                                    <i class="fa fa-exclamation-circle mr-2"></i> <t t-esc="error_message"/>
+                                </div>
+                                <button type="button" class="close text-white mt-2 mr-2" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').classList.remove('show');" style="background: transparent; border: none; opacity: 1; font-size: 1.5rem;">
+                                    <span aria-hidden="true">&amp;times;</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <script type="text/javascript">
+                        setTimeout(function(){
+                            var t = document.querySelector('.toast.show');
+                            if(t) t.classList.remove('show');
+                            if (window.history.replaceState) {
+                                var url = new URL(window.location.href);
+                                url.searchParams.delete('error');
+                                window.history.replaceState({path: url.href}, '', url.href);
+                            }
+                        }, 5000);
+                    </script>
+                </t>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="approvalsTabContent">
+                    <t t-call="ucs_portal_self_service.approvals_content"/>
+                </div>
+            </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="approvals_submenu" name="Approvals Submenu">
+        <!-- Extension point for sub-modules to add their tabs -->
+    </template>
+
+    <template id="approvals_content" name="Approvals Content">
+        <!-- Extension point for sub-modules to add their tab content -->
+    </template>
+</odoo>

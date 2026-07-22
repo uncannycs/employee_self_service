@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Add standard Odoo record rule to grant read access to projects for portal users -->
+        <record id="project_rule_portal_custom_access" model="ir.rule">
+            <field name="name">Project: Portal Custom Access</field>
+            <field name="model_id" ref="project.model_project_project"/>
+            <!-- 
+                Grant access if:
+                1. User is assigned to any task in the project (task_ids.user_ids)
+                2. User is the creator/manager of the project (user_id)
+                3. User is the partner of the project
+            -->
+            <field name="active" eval="False"/>
+            <field name="domain_force">['|', '|', ('task_ids.user_ids', 'in', [user.id]), ('user_id', '=', user.id), ('partner_id', '=', user.partner_id.id)]</field>
+            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+    </data>
+</odoo>

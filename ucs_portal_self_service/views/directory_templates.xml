@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Recursive Org Chart Node -->
+    <template id="org_chart_node" name="Org Chart Node">
+        <li>
+            <t t-set="active_children" t-value="emp.child_ids.filtered(lambda c: c.active)"/>
+            <div t-attf-class="org-card #{'is-current' if emp.id == current_employee.id else ''}">
+                <t t-if="emp.image_128">
+                    <img t-attf-src="/web/image/hr.employee/{{ emp.id }}/image_128" t-att-alt="emp.name"/>
+                </t>
+                <t t-else="">
+                    <div class="org-avatar-fallback">
+                        <t t-if="emp.name">
+                            <span class="org-initials"><t t-esc="emp.name[:2].upper()"/></span>
+                        </t>
+                        <t t-else="">
+                            <i class="fa fa-user"/>
+                        </t>
+                    </div>
+                </t>
+                
+                <div class="org-details">
+                    <div class="org-name"><t t-esc="emp.name"/></div>
+                    <t t-if="emp.work_email">
+                        <div class="org-email" style="font-size: 0.75rem; color: #64748b; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><t t-esc="emp.work_email"/></div>
+                    </t>
+                    <t t-if="emp.job_title or (emp.job_id and emp.job_id.name)">
+                        <div class="org-title"><t t-esc="emp.job_title or emp.job_id.name"/></div>
+                    </t>
+                    <t t-if="emp.department_id">
+                        <div class="org-dept"><t t-esc="emp.department_id.name"/></div>
+                    </t>
+                </div>
+                
+                <t t-if="active_children">
+                    <div class="org-toggle-btn" onclick="toggleOrgChildren(this)">
+                        <i class="fa fa-minus"/>
+                        <span class="org-count" style="display: none;"><t t-esc="len(active_children)"/></span>
+                    </div>
+                </t>
+            </div>
+            
+            <t t-if="active_children">
+                <ul class="org-children">
+                    <t t-foreach="active_children" t-as="child">
+                        <t t-call="ucs_portal_self_service.org_chart_node">
+                            <t t-set="emp" t-value="child"/>
+                        </t>
+                    </t>
+                </ul>
+            </t>
+        </li>
+    </template>
+
+    <template id="portal_employee_directory" name="Employee Directory">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="ess-portal-fullwidth">
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">Team Directory</t>
+                </t>
+                
+                <div class="ess-hist-hero" style="margin-top: 0; margin-bottom: 20px;">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-sitemap"/> Team Directory
+                        </div>
+                        <div class="ess-hist-hero-sub">Organization Chart</div>
+                    </div>
+                    <a href="/my/dashboard" class="ess-hist-back-btn ml-3">
+                        <i class="fa fa-arrow-left"/> Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div class="ess-hist-body" style="overflow-x: auto; padding: 40px 20px; background: #fafafa; min-height: 400px;">
+                <t t-if="top_employee">
+                    <div class="org-tree">
+                        <ul>
+                            <t t-call="ucs_portal_self_service.org_chart_node">
+                                <t t-set="emp" t-value="top_employee"/>
+                            </t>
+                        </ul>
+                    </div>
+                </t>
+                <t t-else="">
+                    <div class="text-center text-muted py-5">
+                        <i class="fa fa-users fa-3x mb-3" style="opacity: 0.5;"/>
+                        <h4>No organization chart available</h4>
+                    </div>
+                </t>
+            </div>
+            
+            <script type="text/javascript">
+                function toggleOrgChildren(btn) {
+                    var card = btn.parentElement;
+                    var childrenUl = card.nextElementSibling;
+                    var icon = btn.querySelector('i');
+                    var count = btn.querySelector('.org-count');
+                    
+                    if (childrenUl &amp;&amp; childrenUl.tagName === 'UL') {
+                        if (childrenUl.style.display === 'none') {
+                            childrenUl.style.display = 'flex';
+                            if (icon) icon.style.display = 'inline-block';
+                            if (count) count.style.display = 'none';
+                            btn.classList.remove('collapsed');
+                        } else {
+                            childrenUl.style.display = 'none';
+                            if (icon) icon.style.display = 'none';
+                            if (count) count.style.display = 'inline-block';
+                            btn.classList.add('collapsed');
+                        }
+                    }
+                }
+            </script>
+            </div>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_account_analytic_line_tree_inherit_timesheet_approval" model="ir.ui.view">
+        <field name="name">account.analytic.line.tree.timesheet.approval</field>
+        <field name="model">account.analytic.line</field>
+        <field name="inherit_id" ref="hr_timesheet.hr_timesheet_line_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='unit_amount']" position="after">
+                <field name="state" widget="badge" 
+                       decoration-info="state == 'draft'" 
+                       decoration-warning="state == 'confirm'" 
+                       decoration-success="state == 'approved'" 
+                       decoration-danger="state == 'refused'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_account_analytic_line_form_inherit_timesheet_approval" model="ir.ui.view">
+        <field name="name">account.analytic.line.form.timesheet.approval</field>
+        <field name="model">account.analytic.line</field>
+        <field name="inherit_id" ref="hr_timesheet.hr_timesheet_line_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_submit" string="Submit" type="object" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state != 'confirm'" groups="hr_timesheet.group_hr_timesheet_approver"/>
+                    <button name="action_refuse" string="Refuse" type="object" class="btn-secondary" invisible="state != 'confirm'" groups="hr_timesheet.group_hr_timesheet_approver"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirm,approved"/>
+                </header>
+            </xpath>
+            <xpath expr="//field[@name='date']" position="after">
+                <field name="reject_reason" invisible="state != 'refused'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

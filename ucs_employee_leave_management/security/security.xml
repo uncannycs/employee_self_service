@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Privilege for Portal Leave Approvals -->
+        <record model="res.groups.privilege" id="privilege_portal_leave_approvals">
+            <field name="name">Portal Leave Approvals</field>
+            <field name="category_id" ref="ucs_portal_self_service.module_category_portal_approvals"/>
+        </record>
+
+        <!-- Portal Leave Approvals Groups -->
+        <record id="group_portal_leave_approval_manager" model="res.groups">
+            <field name="name">Leave Manager</field>
+            <field name="privilege_id" ref="privilege_portal_leave_approvals"/>
+            <field name="comment">Can approve leaves for their subordinates.</field>
+        </record>
+
+        <record id="group_portal_leave_approval_admin" model="res.groups">
+            <field name="name">Leave Administrator</field>
+            <field name="privilege_id" ref="privilege_portal_leave_approvals"/>
+            <field name="implied_ids" eval="[(4, ref('group_portal_leave_approval_manager'))]"/>
+            <field name="comment">Can approve all leaves.</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View -->
+    <record id="view_ucs_portal_announcement_form" model="ir.ui.view">
+        <field name="name">ucs.portal.announcement.form</field>
+        <field name="model">ucs.portal.announcement</field>
+        <field name="arch" type="xml">
+            <form string="Announcement">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active == True"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Announcement Title..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Content">
+                            <field name="content" widget="html"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- List View -->
+    <record id="view_ucs_portal_announcement_tree" model="ir.ui.view">
+        <field name="name">ucs.portal.announcement.list</field>
+        <field name="model">ucs.portal.announcement</field>
+        <field name="arch" type="xml">
+            <list string="Announcements">
+                <field name="date"/>
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_ucs_portal_announcement" model="ir.actions.act_window">
+        <field name="name">Portal Announcements</field>
+        <field name="res_model">ucs.portal.announcement</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create the first announcement for the portal!
+            </p>
+        </field>
+    </record>
+
+    <!-- Menuitem -->
+    <menuitem id="menu_ucs_portal_announcements"
+              name="Portal Announcements"
+              parent="hr.menu_hr_root"
+              action="action_ucs_portal_announcement"
+              sequence="99"/>
+</odoo>

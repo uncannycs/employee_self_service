@@ -1,0 +1,24 @@
+.ess-mention-dropdown {
+    position: absolute;
+    z-index: 1050;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-top: 4px;
+    background-color: white;
+}
+.ess-mention-item {
+    cursor: pointer;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+}
+.ess-mention-item:last-child {
+    border-bottom: none;
+}
+.ess-mention-item:hover, .ess-mention-item.active {
+    background-color: #f8f9fa;
+    color: #000;
+}

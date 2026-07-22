@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ucs_portal_announcement_user,ucs.portal.announcement.user,model_ucs_portal_announcement,base.group_user,1,1,1,1
+access_ucs_portal_announcement_portal,ucs.portal.announcement.portal,model_ucs_portal_announcement,base.group_portal,1,0,0,0
+access_ucs_portal_announcement_public,ucs.portal.announcement.public,model_ucs_portal_announcement,base.group_public,1,0,0,0

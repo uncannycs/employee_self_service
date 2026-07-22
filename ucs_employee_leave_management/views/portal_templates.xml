@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inject Leave and Approvals into Employee Dashboard -->
+    <template id="portal_my_home_leave_card" inherit_id="ucs_portal_self_service.employee_dashboard_layout">
+        
+        <!-- Inject Leaves and Approvals cards before Directory card -->
+        <xpath expr="//div[hasclass('ess-tier1-cards')]/t[@t-if='is_employee']/a[@href='/my/directory']" position="before">
+            <!-- 3. Leaves -->
+            <a href="/my/leaves" class="ess-split-card">
+                <div class="ess-split-icon-area" style="background-color: #10b981;">
+                    <i class="fa fa-plane fa-2x text-white"/>
+                </div>
+                <div class="ess-split-text-area">
+                    <div class="ess-split-title" style="color: #10b981;">Leaves</div>
+                    <div class="ess-split-value text-dark"><i class="fa fa-calendar text-muted" style="font-size:16px;"/></div>
+                </div>
+            </a>
+        </xpath>
+
+        <!-- Inject Team Leaves into Middle Grid -->
+        <xpath expr="//div[hasclass('ess-main-content')]/t[@t-if='is_employee']/div[hasclass('row')][1]" position="after">
+            <div class="row mt-4">
+                <!-- Right: Team Leaves -->
+                <div class="col-lg-12 col-12">
+                    <div class="card border-0 shadow-sm ess-widget-card mb-4" style="border-radius: 8px; background: #fff; height: calc(100% - 1.5rem);">
+                        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 font-weight-bold text-dark text-uppercase" style="font-size: 0.95rem; letter-spacing: 0.5px;">Team Leaves (This Month)</h5>
+                        </div>
+                        <div class="card-body px-4 pt-2 pb-4">
+                            <div class="table-responsive" style="max-height: 320px; overflow-y: auto; scrollbar-width: thin;">
+                                <table class="table table-borderless table-hover mb-0" style="font-size: 0.9rem;">
+                                    <thead style="border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 0.75rem; position: sticky; top: 0; background: #fff; z-index: 2;">
+                                        <tr>
+                                            <th class="py-3 px-2">Employee</th>
+                                            <th class="py-3 px-2">From Date</th>
+                                            <th class="py-3 px-2">To Date</th>
+                                            <th class="py-3 px-2">Type</th>
+                                            <th class="py-3 px-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-if="hierarchy_leaves">
+                                            <t t-foreach="hierarchy_leaves" t-as="leave">
+                                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                    <td class="py-3 px-2">
+                                                        <div class="d-flex align-items-center">
+                                                            <img t-attf-src="/web/image/hr.employee/{{ leave.employee_id.id }}/avatar_128" 
+                                                                 style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
+                                                            <span class="font-weight-bold text-dark"><t t-esc="leave.employee_id.name"/></span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-2"><t t-esc="leave.request_date_from.strftime('%d %b %Y') if leave.request_date_from else '-'"/></td>
+                                                    <td class="py-3 px-2"><t t-esc="leave.request_date_to.strftime('%d %b %Y') if leave.request_date_to else '-'"/></td>
+                                                    <td class="py-3 px-2">
+                                                        <span class="badge badge-pill" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 6px 12px; font-weight: 600;">
+                                                            <t t-esc="leave.holiday_status_id.name"/>
+                                                        </span>
+                                                    </td>
+                                                    <td class="py-3 px-2">
+                                                        <t t-if="leave.state == 'validate' or leave.state == 'validate1'">
+                                                            <span class="badge badge-pill" style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 6px 12px; font-weight: 600;">Approved</span>
+                                                        </t>
+                                                        <t t-elif="leave.state == 'confirm'">
+                                                            <span class="badge badge-pill" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 6px 12px; font-weight: 600;">To Approve</span>
+                                                        </t>
+                                                        <t t-elif="leave.state == 'refuse'">
+                                                            <span class="badge badge-pill" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 6px 12px; font-weight: 600;">Refused</span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge badge-pill" style="background: rgba(107, 114, 128, 0.1); color: #6b7280; padding: 6px 12px; font-weight: 600; text-transform: capitalize;"><t t-esc="leave.state"/></span>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <tr>
+                                                <td colspan="5" class="text-center py-4 text-muted">
+                                                    <i class="fa fa-calendar-check-o fa-2x mb-2" style="color: #3b82f6; opacity: 0.5;"></i>
+                                                    <div>No leaves this month!</div>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+
+    </template>
+
+</odoo>

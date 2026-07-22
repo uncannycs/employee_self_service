@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="leave_approvals_tabs" inherit_id="ucs_portal_self_service.approvals_submenu">
+        <xpath expr="." position="inside">
+            <t t-if="request.env.user.has_group('ucs_employee_leave_management.group_portal_leave_approval_manager')">
+                <li class="nav-item" role="presentation">
+                    <a href="#leave" class="ess-sub-nav-item nav-link" t-att-class="'ess-sub-nav-item nav-link ' + ('active' if request.params.get('tab', 'leave') == 'leave' else '')" data-bs-toggle="tab" role="tab"
+                       style="background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; border-bottom: 3px solid transparent; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Leave
+                    </a>
+                </li>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="leave_approvals_content" inherit_id="ucs_portal_self_service.approvals_content">
+        <xpath expr="." position="inside">
+            <t t-if="request.env.user.has_group('ucs_employee_leave_management.group_portal_leave_approval_manager')">
+                <div class="tab-pane fade" t-att-class="'tab-pane fade ' + ('show active' if request.params.get('tab', 'leave') == 'leave' else '')" id="leave" role="tabpanel">
+                    <div class="ess-hist-table-wrap">
+                        <h4 class="mb-3 px-3 pt-3" style="color: var(--ess-primary);"><i class="fa fa-hourglass-half"/> Pending Approvals</h4>
+                        <table class="ess-hist-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Date From</th>
+                                    <th>Date To</th>
+                                    <th>Leave Type</th>
+                                    <th>Days</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-if="leaves">
+                                    <t t-foreach="leaves" t-as="leave">
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img t-attf-src="/web/image/hr.employee/{{ leave.employee_id.id }}/avatar_128" 
+                                                         style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
+                                                    <span class="font-weight-bold text-dark"><t t-esc="leave.employee_id.name"/></span>
+                                                </div>
+                                            </td>
+                                            <td class="font-weight-bold"><t t-esc="leave.request_date_from.strftime('%d/%m/%Y') if leave.request_date_from else ''"/></td>
+                                            <td class="font-weight-bold"><t t-esc="leave.request_date_to.strftime('%d/%m/%Y') if leave.request_date_to else ''"/></td>
+                                            <td>
+                                                <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
+                                            </td>
+                                            <td>
+                                                <t t-esc="leave.number_of_days"/>
+                                                <t t-if="leave.request_unit_half">
+                                                    <small class="text-muted d-block">
+                                                        (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
+                                                    </small>
+                                                </t>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-warning text-white">To Approve</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
+                                                    <i class="fa fa-check"/> Approve
+                                                </a>
+                                                <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse this leave request?');" title="Refuse">
+                                                    <i class="fa fa-times"/> Refuse
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                <t t-else="">
+                                    <tr>
+                                        <td colspan="7" class="ess-empty-row">
+                                            <i class="fa fa-check-circle-o fa-2x"/>
+                                            <div>No pending approvals found. You're all caught up!</div>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>

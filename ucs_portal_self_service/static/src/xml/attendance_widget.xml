@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="ucs_portal_self_service.PortalAttendanceWidget" owl="1">
+        <div class="card shadow-sm border-0 bg-primary text-white text-center">
+            <div class="card-body py-5">
+                <t t-if="state.loading">
+                    <div class="spinner-border text-light" role="status"></div>
+                    <p class="mt-2">Loading...</p>
+                </t>
+                <t t-else="">
+                    <h5 class="mb-4">Welcome, <t t-esc="state.employee_name"/></h5>
+                    
+                    <div class="display-4 mb-3 font-weight-bold">
+                        <t t-esc="(state.hours_today).toFixed(2)"/> <small style="font-size: 0.4em;">hrs</small>
+                    </div>
+                    
+                    <button class="btn btn-lg btn-block mb-3 fw-bold rounded-pill shadow"
+                            t-attf-class="{{ state.attendance_state == 'checked_in' ? 'btn-danger' : 'btn-success' }}"
+                            t-on-click="toggleAttendance">
+                        <i t-attf-class="fa {{ state.attendance_state == 'checked_in' ? 'fa-sign-out' : 'fa-sign-in' }}"></i>
+                        <t t-if="state.attendance_state == 'checked_in'"> CHECK OUT</t>
+                        <t t-else=""> CHECK IN</t>
+                    </button>
+                    
+                    <p class="mb-0 mt-4">
+                        <a href="/my/attendance/history" class="text-white text-decoration-underline">
+                            <i class="fa fa-history"></i> View History
+                        </a>
+                    </p>
+                </t>
+            </div>
+        </div>
+    </t>
+</templates>

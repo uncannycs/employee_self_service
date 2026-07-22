@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Floating Chat Widget Container -->
+    <template id="portal_floating_chat_widget" inherit_id="portal.frontend_layout">
+        <xpath expr="//div[@id='wrapwrap']" position="inside">
+            <!-- The floating button and sidebar are dynamically injected or controlled by JS, 
+                 but we provide the skeleton here. -->
+                 
+            <div id="ess-floating-chat-app" class="d-none d-md-block">
+                <!-- Floating Action Button (FAB) -->
+                <button id="ess-chat-fab" class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" title="Open Chat">
+                    <i class="fa fa-comments fa-2x"></i>
+                    <span id="ess-chat-fab-badge" class="badge bg-danger rounded-pill position-absolute d-none" style="top: -5px; right: -5px;">0</span>
+                </button>
+
+                <!-- Sidebar / Popup Panel -->
+                <div id="ess-chat-sidebar" class="card shadow-lg ess-sidebar-hidden d-flex flex-column">
+                    <!-- Header -->
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                        <div id="ess-chat-sidebar-title" class="font-weight-bold d-flex align-items-center">
+                            <i class="fa fa-comments mr-2"></i> My Messages
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <button id="ess-chat-sidebar-back" class="btn btn-sm btn-link text-white p-0 d-none" title="Back to Channels">
+                                <i class="fa fa-arrow-left fa-lg"></i>
+                            </button>
+                            <button id="ess-chat-sidebar-close" class="btn btn-sm btn-link text-white p-0 ml-3" title="Close Chat">
+                                <i class="fa fa-times fa-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Channel List View -->
+                    <div id="ess-chat-sidebar-channels" class="flex-grow-1 overflow-auto bg-light">
+                        <div class="text-center text-muted p-4 ess-chat-loading">
+                            <i class="fa fa-spinner fa-spin fa-2x mb-2"></i>
+                            <p>Loading channels...</p>
+                        </div>
+                        <div id="ess-chat-channel-list" class="list-group list-group-flush">
+                            <!-- Channels injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Chat Room View (Hidden by default) -->
+                    <div id="ess-chat-sidebar-room" class="flex-grow-1 d-flex flex-column d-none ess-chat-container bg-white">
+                        <!-- Chat History -->
+                        <div id="ess-chat-history" class="p-3 flex-grow-1 position-relative" style="overflow-y: auto; overflow-x: hidden;">
+                            <div class="text-center text-muted p-4 ess-chat-loading">
+                                <i class="fa fa-spinner fa-spin fa-2x mb-2"></i>
+                                <p>Loading messages...</p>
+                            </div>
+                            <!-- Messages injected via JS -->
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="p-2 border-top bg-light">
+                            <form id="ess-chat-form" class="d-flex align-items-end">
+                                <textarea class="form-control" id="ess-chat-input" rows="1" placeholder="Type a message... (@ to mention)" style="resize: none; border-radius: 20px; padding: 10px 15px; max-height: 100px;"></textarea>
+                                <button type="submit" class="btn btn-primary ml-2 mb-1" style="border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i class="fa fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+    </template>
+</odoo>

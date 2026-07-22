@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_task_form2_inherited_portal_ss" model="ir.ui.view">
+        <field name="name">project.task.form.inherited.portal.ss</field>
+        <field name="model">project.task</field>
+        <field name="inherit_id" ref="project.view_task_form2"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@id='date_deadline_and_recurring_task']" position="after">
+                <field name="client_deadline" groups="ucs_portal_self_service.group_custom_project_manager"/>
+            </xpath>
+            <xpath expr="//div[@id='allocated_hours_container']" position="after">
+                <field name="client_allocated_hours" widget="timesheet_uom" groups="ucs_portal_self_service.group_custom_project_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Project Task Type Form Inherited -->
+    <record id="view_task_type_form_inherited_portal_ss" model="ir.ui.view">
+        <field name="name">project.task.type.form.inherited.portal.ss</field>
+        <field name="model">project.task.type</field>
+        <field name="inherit_id" ref="project.task_type_edit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='fold']" position="after">
+                <field name="is_in_progress_stage"/>
+                <field name="is_done_stage"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Project Task Type List Inherited -->
+    <record id="view_task_type_tree_inherited_portal_ss" model="ir.ui.view">
+        <field name="name">project.task.type.tree.inherited.portal.ss</field>
+        <field name="model">project.task.type</field>
+        <field name="inherit_id" ref="project.task_type_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='fold']" position="after">
+                <field name="is_in_progress_stage" optional="show"/>
+                <field name="is_done_stage" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

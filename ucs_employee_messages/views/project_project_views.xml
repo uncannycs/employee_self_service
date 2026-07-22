@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="edit_project_inherit_discuss_channel" model="ir.ui.view">
+        <field name="name">project.project.form.inherit.discuss.channel</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <!-- Show button only when BOTH channels are not yet created -->
+                <button
+                    name="action_create_discuss_channels"
+                    string="Create Channels"
+                    type="object"
+                    class="oe_highlight"
+                    invisible="discuss_channel_id != False and task_discuss_channel_id != False"
+                />
+            </xpath>
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="discuss_channel_id" readonly="1" string="Discussion Channel"/>
+                <field name="task_discuss_channel_id" readonly="1" string="Task Discussion Channel"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

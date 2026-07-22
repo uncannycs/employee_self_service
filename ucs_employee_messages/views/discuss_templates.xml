@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List of Chats -->
+    <template id="portal_my_chats" name="My Chats">
+        <t t-call="portal.portal_layout">
+            <div class="ess-hist-hero" style="margin-top: 0; margin-bottom: 20px;">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-comments"/> My Messages
+                        </div>
+                        <div class="ess-hist-hero-sub">Team and Project Discussions</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/my/dashboard" class="ess-hist-back-btn ml-3">
+                            <i class="fa fa-arrow-left"/> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <t t-if="not channels">
+                        <div class="alert alert-info">
+                            You have no active conversations.
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="list-group mb-4" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                            <t t-foreach="channels" t-as="channel">
+                                <a t-attf-href="/my/chats/#{channel.id}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="ess-menu-icon mr-3" style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg,#cffafe,#a5f3fc); display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa fa-hashtag fa-lg" style="color: #0891b2;"/>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1 text-dark font-weight-bold"><t t-esc="channel.name"/></h6>
+                                            <small class="text-muted"><t t-esc="channel.member_count"/> Members</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <t t-set="unread" t-value="unread_counts.get(channel.id, 0)"/>
+                                        <span t-attf-id="ess-channel-unread-badge-#{channel.id}" t-attf-class="badge text-bg-danger rounded-pill mr-3 #{'d-none' if not unread else ''}"><t t-esc="unread or 0"/></span>
+                                        <i class="fa fa-chevron-right text-muted"/>
+                                    </div>
+                                </a>
+                            </t>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- Chat Room -->
+    <template id="portal_chat_room" name="Chat Room">
+        <t t-call="portal.portal_layout">
+            
+            <div class="ess-hist-hero" style="margin-top: 0; margin-bottom: 20px;">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-hashtag"/> <t t-esc="channel.name"/>
+                        </div>
+                        <div class="ess-hist-hero-sub">Project Discussion Channel</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/my/chats" class="ess-hist-back-btn ml-3">
+                            <i class="fa fa-arrow-left"/> Back to Chats
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card ess-chat-container">
+                <div class="card-body p-0 d-flex flex-column" style="height: 60vh;">
+                    
+                    <!-- Chat History (Messages go here) -->
+                    <div id="ess-chat-history" class="p-3 flex-grow-1" style="overflow-y: auto; background-color: #f8f9fa;"
+                         t-att-data-channel-id="channel.id" t-att-data-partner-id="partner.id">
+                        <!-- Messages loaded via JS -->
+                        <div class="text-center text-muted ess-chat-loading mt-4">
+                            <i class="fa fa-spinner fa-spin fa-2x"/>
+                            <p class="mt-2">Loading messages...</p>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="p-3 border-top bg-white">
+                        <form id="ess-chat-form" class="d-flex">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <textarea class="form-control" id="ess-chat-input" rows="1" placeholder="Type a message..." style="resize: none; border-radius: 20px; padding: 10px 15px;"></textarea>
+                            <button type="submit" class="btn btn-primary ml-2" style="border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa fa-paper-plane"/>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+        </t>
+    </template>
+
+    <!-- Global Toast Container -->
+    <template id="portal_chat_global_toast" inherit_id="portal.frontend_layout">
+        <xpath expr="//div[@id='wrapwrap']" position="inside">
+            <!-- Global Toast Container for Notifications -->
+            <div id="ess-global-toast-container" class="position-fixed" style="top: 80px; right: 20px; z-index: 1060;">
+                <!-- Toasts will be injected here via JS -->
+            </div>
+        </xpath>
+    </template>
+</odoo>

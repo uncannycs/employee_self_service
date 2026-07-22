@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+
+        <!-- Portal Approvals Category -->
+        <record model="ir.module.category" id="module_category_portal_approvals">
+            <field name="name">Portal Approvals</field>
+            <field name="description">Helps you manage portal approvals for leaves, timesheets, etc.</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <!-- Portal Approvals Group -->
+        <record id="group_portal_approvals" model="res.groups">
+            <field name="name">Portal Approvals</field>
+            <field name="comment">Allows portal users to see the Approvals card on the dashboard.</field>
+        </record>
+
+        <!-- Create Project Group -->
+        <record id="group_portal_project_create" model="res.groups">
+            <field name="name">Can Create Portal Projects</field>
+            <field name="comment">Allows portal users to create new projects.</field>
+        </record>
+
+        <!-- Create Task Group -->
+        <record id="group_portal_task_create" model="res.groups">
+            <field name="name">Can Create Portal Tasks</field>
+            <field name="comment">Allows portal users to create new tasks within projects.</field>
+        </record>
+
+        <!-- Log Timesheet Group -->
+        <record id="group_portal_timesheet_log" model="res.groups">
+            <field name="name">Can Log Portal Timesheets</field>
+            <field name="comment">Allows portal users to view and log timesheets on tasks.</field>
+        </record>
+
+        <record id="group_custom_project_manager" model="res.groups">
+            <field name="name">Project Manager(Custom)</field>
+            <field name="comment">Allows users to see Client Deadline and Allocated Hours fields.</field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,20 @@
+.o_portal_self_service_dashboard {
+    .self-service-menu-card {
+        border-radius: 12px;
+        .btn-outline-primary, .btn-outline-success, .btn-outline-info, .btn-outline-secondary, .btn-outline-dark, .btn-outline-warning {
+            border-width: 2px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            &:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            }
+        }
+    }
+}
+.o_portal_leaves_page {
+    .progress {
+        background-color: #e9ecef;
+        border-radius: .25rem;
+    }
+}

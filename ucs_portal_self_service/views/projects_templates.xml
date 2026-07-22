@@ -1,0 +1,861 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Projects Kanban View -->
+    <template id="portal_my_projects_override" inherit_id="project.portal_my_projects" name="My Projects">
+        <xpath expr="//t[@t-call='portal.portal_layout']" position="replace">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="ess-portal-fullwidth">
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">Projects</t>
+                </t>
+                
+                <div class="ess-hist-hero" style="margin-top: 0; margin-bottom: 20px;">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-folder-open"/> My Projects
+                        </div>
+                        <div class="ess-hist-hero-sub">Select a project to manage tasks</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_project_create')">
+                            <button class="ess-hist-back-btn" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                                <i class="fa fa-plus"/> New Project
+                            </button>
+                        </t>
+                        <a href="/my/dashboard" class="ess-hist-back-btn ml-3">
+                            <i class="fa fa-arrow-left"/> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Error Toast -->
+            <t t-if="error_message">
+                <div class="position-fixed" style="z-index: 1055; right: 20px; top: 20px;">
+                    <div class="toast align-items-center text-white bg-danger border-0 show shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 8px;">
+                        <div class="d-flex justify-content-between">
+                            <div class="toast-body font-weight-bold px-4 py-3" style="font-size: 1rem;">
+                                <i class="fa fa-exclamation-circle mr-2"></i> <t t-esc="error_message"/>
+                            </div>
+                            <button type="button" class="close text-white mt-2 mr-2" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').classList.remove('show');" style="background: transparent; border: none; opacity: 1; font-size: 1.5rem;">
+                                <span aria-hidden="true">&amp;times;</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    setTimeout(function(){
+                        var t = document.querySelector('.toast.show');
+                        if(t) t.classList.remove('show');
+                    }, 5000);
+                </script>
+            </t>
+
+            <!-- Create Project Modal -->
+            <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_project_create')">
+                <div class="modal fade" id="createProjectModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                            <form action="/my/projects/create" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                    <h5 class="modal-title font-weight-bold text-dark">Create New Project</h5>
+                                    <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                        <span aria-hidden="true">&amp;times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body px-4 pt-3">
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Project Name</label>
+                                        <input type="text" class="form-control" name="name" required="1" placeholder="e.g. Website Redesign" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted small font-weight-bold">Description (Optional)</label>
+                                        <textarea class="form-control" name="description" rows="3" placeholder="Brief details about the project..." style="border-radius: 6px;"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                    <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
+                                    <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Create Project</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </t>
+
+            <t t-if="not projects">
+                <div class="alert alert-warning mt-3" role="alert">
+                    There are currently no projects for your account.
+                </div>
+            </t>
+
+            <div t-if="projects" class="ess-menu-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                <t t-foreach="projects" t-as="project">
+                    <a t-attf-href="/my/projects/#{project.id}" class="ess-menu-card" style="align-items: flex-start; text-align: left; padding: 20px;">
+                        <div class="d-flex w-100 justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-truncate" style="color: var(--ess-primary); font-weight: 700;"><t t-esc="project.name"/></h5>
+                            <span class="badge badge-pill badge-light" style="background: var(--ess-light); color: var(--ess-violet);"><t t-esc="project.task_count"/> Tasks</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 0.85rem; height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            <t t-if="project.description" t-esc="project.description"/>
+                            <t t-else="">No description provided.</t>
+                        </div>
+                        
+                        <div class="d-flex w-100 align-items-center mt-3 pt-3 border-top" style="border-color: var(--ess-border) !important;">
+                            <t t-if="project.user_id">
+                                <img t-attf-src="/web/image/res.users/#{project.user_id.id}/avatar_128" 
+                                     class="rounded-circle mr-2" style="width: 28px; height: 28px; object-fit: cover;"
+                                     t-att-alt="project.user_id.name"/>
+                                <span style="font-size: 0.8rem; color: #6b7280;"><t t-esc="project.user_id.name"/></span>
+                            </t>
+                            <t t-else="">
+                                <span style="font-size: 0.8rem; color: #9ca3af;">No Project Manager</span>
+                            </t>
+                        </div>
+                    </a>
+                </t>
+            </div>
+                <div t-if="pager" class="o_portal_pager text-center mt-4 mb-4"><t t-call="portal.pager"/></div>
+            </div>
+        </t>
+        </xpath>
+    </template>
+
+    <!-- Tasks Kanban & List View Wrapper -->
+    <template id="portal_my_project_override" inherit_id="project.portal_my_project" name="My Tasks">
+        <xpath expr="//t[@t-call='portal.portal_layout']" position="replace">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="ess-portal-fullwidth">
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">Tasks</t>
+                </t>
+                
+                <!-- Hero Header -->
+                <div class="ess-hist-hero" style="margin-top: 0; margin-bottom: 20px;">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-tasks"/> <t t-esc="project.name"/>
+                        </div>
+                        <div class="ess-hist-hero-sub">Manage project tasks</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_task_create')">
+                            <button class="ess-hist-back-btn" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                                <i class="fa fa-plus"/> New Task
+                            </button>
+                        </t>
+                        <a t-attf-href="/my/projects/#{project.id}?view_type=kanban" 
+                           t-attf-class="ess-hist-back-btn ml-2" t-att-style="'background: rgba(255,255,255,0.3);' if view_type == 'kanban' else ''">
+                            <i class="fa fa-th-large"/> Kanban
+                        </a>
+                        <a t-attf-href="/my/projects/#{project.id}?view_type=list" 
+                           t-attf-class="ess-hist-back-btn ml-2" t-att-style="'background: rgba(255,255,255,0.3);' if view_type == 'list' else ''">
+                            <i class="fa fa-list"/> List
+                        </a>
+                        <a href="/my/projects" class="ess-hist-back-btn ml-3">
+                            <i class="fa fa-arrow-left"/> Projects
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Error Toast -->
+            <t t-if="error_message">
+                <div class="position-fixed" style="z-index: 1055; right: 20px; top: 20px;">
+                    <div class="toast align-items-center text-white bg-danger border-0 show shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 8px;">
+                        <div class="d-flex justify-content-between">
+                            <div class="toast-body font-weight-bold px-4 py-3" style="font-size: 1rem;">
+                                <i class="fa fa-exclamation-circle mr-2"></i> <t t-esc="error_message"/>
+                            </div>
+                            <button type="button" class="close text-white mt-2 mr-2" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').classList.remove('show');" style="background: transparent; border: none; opacity: 1; font-size: 1.5rem;">
+                                <span aria-hidden="true">&amp;times;</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    setTimeout(function(){
+                        var t = document.querySelector('.toast.show');
+                        if(t) t.classList.remove('show');
+                    }, 5000);
+                </script>
+            </t>
+
+            <!-- Create Task Modal -->
+            <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_task_create')">
+                <div class="modal fade" id="createTaskModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                            <form action="/my/tasks/create" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="project_id" t-att-value="project.id"/>
+                                
+                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                    <h5 class="modal-title font-weight-bold text-dark">Create New Task</h5>
+                                    <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                        <span aria-hidden="true">&amp;times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body px-4 pt-3">
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Task Title</label>
+                                        <input type="text" class="form-control" name="name" required="1" placeholder="e.g. Design Homepage" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Description (Optional)</label>
+                                        <textarea class="form-control" name="description" rows="3" style="border-radius: 6px;"></textarea>
+                                    </div>
+                                    <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Deadline (Optional)</t><t t-else="">Deadline (Optional)</t></label>
+                                            <input type="date" class="form-control" name="date_deadline" style="border-radius: 6px;"/>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Allocated Hours (Optional)</t><t t-else="">Allocated Hours (Optional)</t></label>
+                                            <input type="text" class="form-control" name="allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
+                                        </div>
+                                    </t>
+                                    <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Deadline (Optional)</t><t t-else="">Deadline (Optional)</t></label>
+                                            <input type="date" class="form-control" name="client_deadline" style="border-radius: 6px;"/>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Allocated Hours (Optional)</t><t t-else="">Allocated Hours (Optional)</t></label>
+                                            <input type="text" class="form-control" name="client_allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
+                                        </div>
+                                    </t>
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted small font-weight-bold">Assignee</label>
+                                        <select class="form-control" name="user_id" style="border-radius: 6px;">
+                                            <option value="">-- Unassigned --</option>
+                                            <t t-if="assignable_users">
+                                                <t t-foreach="assignable_users" t-as="u">
+                                                    <option t-att-value="u.id" t-att-selected="'selected' if u.id == request.env.user.id else None">
+                                                        <t t-esc="u.name"/>
+                                                    </option>
+                                                </t>
+                                            </t>
+                                            <t t-else="">
+                                                <option t-att-value="request.env.user.id">Assign to Me (<t t-esc="request.env.user.name"/>)</option>
+                                            </t>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                    <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
+                                    <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Create Task</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </t>
+
+            <!-- Kanban View -->
+            <t t-if="view_type == 'kanban'">
+                <div class="ess-kanban-board">
+                    <t t-foreach="stages" t-as="stage">
+                        <div class="ess-kanban-col" t-att-data-stage-id="stage.id">
+                            <div class="ess-kanban-col-header">
+                                <h6 class="ess-kanban-col-title"><t t-esc="stage.name"/></h6>
+                                <span class="badge badge-pill badge-light text-muted"><t t-esc="len(tasks_by_stage.get(stage.id, []))"/></span>
+                            </div>
+                            <div class="ess-kanban-cards-container">
+                                <t t-foreach="tasks_by_stage.get(stage.id, [])" t-as="task">
+                                    <div class="ess-kanban-card" draggable="true" t-att-data-task-id="task.id">
+                                        <div class="ess-task-prio-ribbon" t-att-data-prio="task.priority"/>
+                                        <div class="ess-kanban-card-title">
+                                            <a t-attf-href="/my/tasks/#{task.id}" style="color: inherit; text-decoration: none;">
+                                                <t t-esc="task.name"/>
+                                            </a>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <small class="text-muted">
+                                                <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                                    <t t-if="task.allocated_hours">
+                                                        <i class="fa fa-clock-o"/> <t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Dev: </t><t t-esc="'{:02d}:{:02d}'.format(int(task.allocated_hours), int((task.allocated_hours - int(task.allocated_hours)) * 60))"/>
+                                                    </t>
+                                                </t>
+                                                <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                                    <t t-if="task.client_allocated_hours">
+                                                        <t t-if="task.allocated_hours and request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')"><br/></t>
+                                                        <i class="fa fa-clock-o"/> <t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client: </t><t t-esc="'{:02d}:{:02d}'.format(int(task.client_allocated_hours), int((task.client_allocated_hours - int(task.client_allocated_hours)) * 60))"/>
+                                                    </t>
+                                                </t>
+                                            </small>
+                                        </div>
+                                        <div class="d-flex w-100 justify-content-between align-items-end mt-2">
+                                            <div class="ess-task-assignees">
+                                                <t t-foreach="task.user_ids[:3]" t-as="user">
+                                                    <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128" 
+                                                         class="ess-avatar-micro" t-att-title="user.name"/>
+                                                </t>
+                                                <t t-if="len(task.user_ids) > 3">
+                                                    <span class="ess-avatar-micro ess-avatar-more">+<t t-esc="len(task.user_ids) - 3"/></span>
+                                                </t>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <!-- Action Buttons for Timesheet & Subtask -->
+                                                <t t-if="is_employee">
+                                                    <button class="btn btn-sm btn-outline-secondary ess-icon-btn" title="Add Timesheet"
+                                                            data-bs-toggle="modal" t-attf-data-bs-target="#addTimesheetModal#{task.id}">
+                                                        <i class="fa fa-clock-o"/>
+                                                    </button>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Add Timesheet Modal for Task -->
+                                    <t t-if="is_employee">
+                                        <div class="modal fade" t-attf-id="addTimesheetModal#{task.id}" tabindex="-1" role="dialog" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                                <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                                                    <form action="/my/timesheets/create" method="post">
+                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                        <input type="hidden" name="project_id" t-att-value="project.id"/>
+                                                        <input type="hidden" name="task_id" t-att-value="task.id"/>
+                                                        
+                                                        <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                                            <h5 class="modal-title font-weight-bold text-dark">Log Time: <t t-esc="task.name"/></h5>
+                                                            <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                                                <span aria-hidden="true">&amp;times;</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="modal-body px-4 pt-3">
+                                                            <div class="form-group mb-3">
+                                                                <label class="text-muted small font-weight-bold">Date</label>
+                                                                <input type="date" class="form-control" name="date" required="1" t-att-value="datetime.date.today().strftime('%Y-%m-%d')" style="border-radius: 6px;"/>
+                                                            </div>
+                                                            <div class="form-group mb-3">
+                                                                <label class="text-muted small font-weight-bold">Hours Spent</label>
+                                                                <input type="text" class="form-control" name="unit_amount_str" required="1" placeholder="00:00" pattern="^([0-9]{1,2}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
+                                                            </div>
+                                                            <div class="form-group mb-4">
+                                                                <label class="text-muted small font-weight-bold">Description</label>
+                                                                <input type="text" class="form-control" name="name" required="1" placeholder="What did you do?" style="border-radius: 6px;"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                                            <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
+                                                            <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Save Timesheet</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                    
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                    
+                    <!-- Unassigned/No Stage tasks -->
+                    <t t-if="tasks_by_stage.get(False)">
+                        <div class="ess-kanban-col" data-stage-id="0">
+                            <div class="ess-kanban-col-header">
+                                <h6 class="ess-kanban-col-title">New / No Stage</h6>
+                                <span class="badge badge-pill badge-light text-muted"><t t-esc="len(tasks_by_stage.get(False))"/></span>
+                            </div>
+                            <div class="ess-kanban-cards-container">
+                                <t t-foreach="tasks_by_stage.get(False)" t-as="task">
+                                    <!-- Same card layout as above -->
+                                    <div class="ess-kanban-card" draggable="true" t-att-data-task-id="task.id">
+                                        <div class="ess-kanban-card-title"><t t-esc="task.name"/></div>
+                                        <div class="d-flex w-100 justify-content-between align-items-end mt-3">
+                                            <div class="ess-task-assignees">
+                                                <t t-foreach="task.user_ids[:3]" t-as="user">
+                                                    <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128" 
+                                                         class="ess-avatar-micro" t-att-title="user.name"/>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </t>
+            
+            <!-- List View -->
+            <t t-if="view_type == 'list'">
+                <div class="ess-hist-body" style="padding: 20px;">
+                    <t t-if="not grouped_tasks">
+                        <div class="alert alert-warning" role="alert">
+                            There are no tasks matching your search.
+                        </div>
+                    </t>
+                    <t t-call="project.portal_tasks_list"/>
+                </div>
+            </t>
+            
+            <!-- JS for Kanban Drag and Drop -->
+            <t t-if="view_type == 'kanban'">
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const cards = document.querySelectorAll('.ess-kanban-card');
+                        const columns = document.querySelectorAll('.ess-kanban-cards-container');
+                        let draggedCard = null;
+
+                        cards.forEach(card => {
+                            card.addEventListener('dragstart', function(e) {
+                                draggedCard = this;
+                                setTimeout(() => this.style.opacity = '0.5', 0);
+                            });
+                            
+                            card.addEventListener('dragend', function() {
+                                draggedCard.style.opacity = '1';
+                                draggedCard = null;
+                            });
+                        });
+
+                        columns.forEach(column => {
+                            column.addEventListener('dragover', function(e) {
+                                e.preventDefault();
+                                this.style.backgroundColor = 'rgba(124,58,237,0.05)';
+                            });
+
+                            column.addEventListener('dragleave', function() {
+                                this.style.backgroundColor = '';
+                            });
+
+                            column.addEventListener('drop', function(e) {
+                                e.preventDefault();
+                                this.style.backgroundColor = '';
+                                if (draggedCard) {
+                                    this.appendChild(draggedCard);
+                                    
+                                    // Update backend
+                                    const taskId = draggedCard.getAttribute('data-task-id');
+                                    const stageId = this.parentElement.getAttribute('data-stage-id');
+                                    
+                                    const formData = new FormData();
+                                    formData.append('task_id', taskId);
+                                    formData.append('stage_id', stageId);
+                                    formData.append('csrf_token', odoo.csrf_token || document.querySelector('input[name="csrf_token"]').value);
+                                    
+                                    fetch('/my/tasks/update_stage', {
+                                        method: 'POST',
+                                        body: formData
+                                    }).then(response => response.json())
+                                      .then(data => {
+                                          if(!data.success) {
+                                              console.error('Error updating stage:', data.error);
+                                              // Optionally reload or show toast
+                                          }
+                                      }).catch(err => console.error(err));
+                                      
+                                    // Update counters
+                                    document.querySelectorAll('.ess-kanban-col').forEach(col => {
+                                        const count = col.querySelectorAll('.ess-kanban-card').length;
+                                        col.querySelector('.ess-kanban-col-header .badge').textContent = count;
+                                    });
+                                }
+                            });
+                        });
+                    });
+                </script>
+            </t>
+            
+                <div t-if="pager" class="o_portal_pager text-center mt-4 mb-4"><t t-call="portal.pager"/></div>
+            </div>
+        </t>
+        </xpath>
+    </template>
+
+    <!-- Task Form View -->
+    <template id="portal_my_task_override" inherit_id="project.portal_my_task" name="Task Details">
+        <xpath expr="//t[@t-call='project.task_link_preview_portal_layout']" position="replace">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="ess-portal-fullwidth">
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">Task Details</t>
+                </t>
+                
+                <!-- Hero Header -->
+                <div class="ess-hist-hero" style="margin-top: 0; margin-bottom: 20px;">
+                <div class="ess-hist-hero-inner">
+                    <div>
+                        <div class="ess-hist-hero-title">
+                            <i class="fa fa-tasks"/> <t t-esc="task.name"/>
+                        </div>
+                        <div class="ess-hist-hero-sub mt-2">
+                            <div class="ess-statusbar d-inline-flex" style="background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; border: 1px solid rgba(255,255,255,0.2);">
+                                <t t-foreach="task.project_id.type_ids" t-as="stage">
+                                    <button t-attf-class="btn btn-sm ess-stage-btn #{'active' if task.stage_id.id == stage.id else ''}"
+                                            t-att-data-task-id="task.id"
+                                            t-att-data-stage-id="stage.id"
+                                            style="border: none; border-radius: 16px; padding: 4px 14px; font-size: 0.85rem; transition: all 0.2s; color: white;">
+                                        <t t-esc="stage.name"/>
+                                    </button>
+                                </t>
+                            </div>
+                            <style>
+                                .ess-stage-btn.active {
+                                    background: white;
+                                    color: var(--ess-primary) !important;
+                                    font-weight: 600;
+                                }
+                                .ess-stage-btn:hover:not(.active) {
+                                    background: rgba(255,255,255,0.2);
+                                }
+                            </style>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_task_create')">
+                            <button class="ess-hist-back-btn" data-bs-toggle="modal" data-bs-target="#editTaskModal">
+                                <i class="fa fa-pencil"/> Edit Task
+                            </button>
+                        </t>
+                        <a t-attf-href="/my/projects/#{task.project_id.id}" class="ess-hist-back-btn ml-3">
+                            <i class="fa fa-arrow-left"/> Back to Tasks
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="row">
+                <div class="col-md-8">
+                    <!-- Task Details Card -->
+                    <div class="card mb-4" style="border: 1px solid var(--ess-border); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted border-bottom pb-2 mb-3"><i class="fa fa-align-left"/> Description</h5>
+                            <div class="card-text">
+                                <t t-if="task.description" t-out="task.description"/>
+                                <t t-else=""><p class="text-muted font-italic">No description provided.</p></t>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timesheets Section -->
+                    <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_portal_timesheet_log')">
+                        <div class="card mb-4" style="border: 1px solid var(--ess-border); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                                    <h5 class="card-title text-muted mb-0"><i class="fa fa-list"/> Timesheets</h5>
+                                    <!-- Log Time Button moved here -->
+                                    <t t-if="is_employee">
+                                        <button class="btn btn-sm btn-light text-primary font-weight-bold" data-bs-toggle="modal" data-bs-target="#addTimesheetModalInline">
+                                            <i class="fa fa-plus"/> Log Time
+                                        </button>
+                                    </t>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Description</th>
+                                                <th>Employee</th>
+                                                <th class="text-right">Hours</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-if="timesheets">
+                                                <t t-foreach="timesheets" t-as="ts">
+                                                    <tr>
+                                                        <td><t t-esc="ts.date"/></td>
+                                                        <td><t t-esc="ts.name"/></td>
+                                                        <td><t t-esc="ts.employee_id.name"/></td>
+                                                        <td class="text-right"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></td>
+                                                    </tr>
+                                                </t>
+                                            </t>
+                                            <t t-else="">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted font-italic pt-4 pb-4">
+                                                        No timesheets logged for this task yet.
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                    
+                    <!-- Chatter Section -->
+                    <div id="task_chat" class="mt-4" data-anchor="true">
+                        <h4 class="text-muted"><i class="fa fa-comments"/> Communication History</h4>
+                        <t t-call="portal.message_thread">
+                            <t t-set="object" t-value="task"/>
+                            <t t-set="token" t-value="task.access_token"/>
+                            <t t-set="pid" t-value="pid"/>
+                            <t t-set="hash" t-value="hash"/>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar -->
+                <div class="col-md-4">
+                    <div class="card" style="border: 1px solid var(--ess-border); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted border-bottom pb-2 mb-3"><i class="fa fa-info-circle"/> Info</h5>
+                            
+                            <div class="mb-3">
+                                <strong>Project:</strong><br/>
+                                <a t-attf-href="/my/projects/#{task.project_id.id}" style="color: var(--ess-primary);">
+                                    <t t-esc="task.project_id.name"/>
+                                </a>
+                            </div>
+
+                            <!-- Developer Deadline (Standard) -->
+                            <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                <div class="mb-3">
+                                    <strong><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Deadline:</t><t t-else="">Deadline:</t></strong><br/>
+                                    <t t-if="task.date_deadline">
+                                        <i class="fa fa-calendar text-danger"/> <t t-esc="task.date_deadline" t-options='{"widget": "date"}'/>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="text-muted">None</span>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <!-- Client Deadline (Custom) -->
+                            <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                <div class="mb-3">
+                                    <strong><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Deadline:</t><t t-else="">Deadline:</t></strong><br/>
+                                    <t t-if="task.client_deadline">
+                                        <i class="fa fa-calendar text-danger"/> <t t-esc="task.client_deadline" t-options='{"widget": "date"}'/>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="text-muted">None</span>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <!-- Developer Allocated Hours (Standard) -->
+                            <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                <div class="mb-3">
+                                    <strong><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Allocated Hours:</t><t t-else="">Allocated Hours:</t></strong><br/>
+                                    <t t-if="task.allocated_hours">
+                                        <i class="fa fa-clock-o text-info"/> <t t-esc="'{:02d}:{:02d}'.format(int(task.allocated_hours), int((task.allocated_hours - int(task.allocated_hours)) * 60))"/>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="text-muted">None</span>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <!-- Client Allocated Hours (Custom) -->
+                            <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                <div class="mb-3">
+                                    <strong><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Allocated Hours:</t><t t-else="">Allocated Hours:</t></strong><br/>
+                                    <t t-if="task.client_allocated_hours">
+                                        <i class="fa fa-clock-o text-info"/> <t t-esc="'{:02d}:{:02d}'.format(int(task.client_allocated_hours), int((task.client_allocated_hours - int(task.client_allocated_hours)) * 60))"/>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="text-muted">None</span>
+                                    </t>
+                                </div>
+                            </t>
+
+                            <div class="mb-3">
+                                <strong>Assignees:</strong><br/>
+                                <div class="d-flex flex-wrap gap-2 mt-2" style="gap: 8px;">
+                                    <t t-if="task.user_ids">
+                                        <t t-foreach="task.user_ids" t-as="user">
+                                            <div class="d-flex align-items-center bg-light rounded-pill px-2 py-1" style="border: 1px solid var(--ess-border);">
+                                                <img t-attf-src="/web/image/res.users/#{user.id}/avatar_128" 
+                                                     class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;"
+                                                     t-att-title="user.name"/>
+                                                <span style="font-size: 0.85rem;"><t t-esc="user.name"/></span>
+                                            </div>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="text-muted">Unassigned</span>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inline Add Timesheet Modal -->
+            <t t-if="is_employee">
+                <div class="modal fade" id="addTimesheetModalInline" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                            <form action="/my/timesheets/create" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="redirect_to" t-attf-value="/my/tasks/#{task.id}"/>
+                                <input type="hidden" name="project_id" t-att-value="task.project_id.id"/>
+                                <input type="hidden" name="task_id" t-att-value="task.id"/>
+                                
+                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                    <h5 class="modal-title font-weight-bold text-dark">Log Time</h5>
+                                    <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                        <span aria-hidden="true">&amp;times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body px-4 pt-3">
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Project</label>
+                                        <input type="text" class="form-control" t-att-value="task.project_id.name" readonly="1" disabled="1" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Task</label>
+                                        <input type="text" class="form-control" t-att-value="task.name" readonly="1" disabled="1" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Date</label>
+                                        <input type="date" class="form-control" name="date" required="1" t-att-value="datetime.date.today().strftime('%Y-%m-%d')" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Hours Spent</label>
+                                        <input type="text" class="form-control" name="unit_amount_str" required="1" placeholder="00:00" pattern="^([0-9]{1,2}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted small font-weight-bold">Description</label>
+                                        <input type="text" class="form-control" name="name" required="1" placeholder="What did you do?" style="border-radius: 6px;"/>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                    <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
+                                    <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Save Timesheet</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </t>
+
+            <!-- Edit Task Modal -->
+            <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_task_create')">
+                <div class="modal fade" id="editTaskModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                            <form action="/my/tasks/update" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="task_id" t-att-value="task.id"/>
+                                
+                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                    <h5 class="modal-title font-weight-bold text-dark">Edit Task</h5>
+                                    <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                        <span aria-hidden="true">&amp;times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body px-4 pt-3">
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Project</label>
+                                        <input type="text" class="form-control" t-att-value="task.project_id.name" disabled="1" style="border-radius: 6px;"/>
+                                        <small class="form-text text-muted mt-2">Project cannot be changed here.</small>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Task Title</label>
+                                        <input type="text" class="form-control" name="name" required="1" t-att-value="task.name" style="border-radius: 6px;"/>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label class="text-muted small font-weight-bold">Description</label>
+                                        <textarea class="form-control" name="description" rows="3" style="border-radius: 6px;"><t t-if="task.description" t-esc="task.description"/></textarea>
+                                    </div>
+                                    <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                        <div class="form-group mb-4">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Deadline</t><t t-else="">Deadline</t></label>
+                                            <input type="date" class="form-control" name="date_deadline" t-att-value="task.date_deadline.strftime('%Y-%m-%d') if task.date_deadline else ''" style="border-radius: 6px;"/>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Allocated Hours</t><t t-else="">Allocated Hours</t></label>
+                                            <input type="text" class="form-control" name="allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.allocated_hours), int((task.allocated_hours - int(task.allocated_hours)) * 60)) if task.allocated_hours else ''" style="border-radius: 6px;"/>
+                                        </div>
+                                    </t>
+                                    <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
+                                        <div class="form-group mb-4">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Deadline</t><t t-else="">Deadline</t></label>
+                                            <input type="date" class="form-control" name="client_deadline" t-att-value="task.client_deadline.strftime('%Y-%m-%d') if hasattr(task, 'client_deadline') and task.client_deadline else ''" style="border-radius: 6px;"/>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Allocated Hours</t><t t-else="">Allocated Hours</t></label>
+                                            <input type="text" class="form-control" name="client_allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.client_allocated_hours), int((task.client_allocated_hours - int(task.client_allocated_hours)) * 60)) if task.client_allocated_hours else ''" style="border-radius: 6px;"/>
+                                        </div>
+                                    </t>
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted small font-weight-bold">Assignee</label>
+                                        <select class="form-control" name="user_id" style="border-radius: 6px;">
+                                            <option value="">-- Unassigned --</option>
+                                            <t t-if="assignable_users">
+                                                <t t-foreach="assignable_users" t-as="u">
+                                                    <option t-att-value="u.id" t-att-selected="'selected' if u.id in task.user_ids.ids else None">
+                                                        <t t-esc="u.name"/>
+                                                    </option>
+                                                </t>
+                                            </t>
+                                            <t t-else="">
+                                                <option t-att-value="request.env.user.id" t-att-selected="'selected' if request.env.user.id in task.user_ids.ids else None">Assign to Me (<t t-esc="request.env.user.name"/>)</option>
+                                            </t>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                    <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
+                                    <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </t>
+
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    const stageBtns = document.querySelectorAll('.ess-stage-btn');
+                    stageBtns.forEach(btn => {
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            
+                            if (this.classList.contains('active')) return;
+                            
+                            const taskId = this.getAttribute('data-task-id');
+                            const stageId = this.getAttribute('data-stage-id');
+                            
+                            // Visual update
+                            stageBtns.forEach(b => b.classList.remove('active'));
+                            this.classList.add('active');
+                            
+                            const formData = new FormData();
+                            formData.append('task_id', taskId);
+                            formData.append('stage_id', stageId);
+                            formData.append('csrf_token', odoo.csrf_token || document.querySelector('input[name="csrf_token"]').value);
+                            
+                            fetch('/my/tasks/update_stage', {
+                                method: 'POST',
+                                body: formData
+                            }).then(response => response.json())
+                              .then(data => {
+                                  if(!data.success) {
+                                      console.error('Error updating stage:', data.error);
+                                      alert("Failed to update stage. You may not have permission.");
+                                      window.location.reload();
+                                  }
+                              }).catch(err => {
+                                  console.error(err);
+                                  window.location.reload();
+                              });
+                        });
+                    });
+                });
+            </script>
+            </div>
+        </t>
+        </xpath>
+    </template>
+</odoo>
