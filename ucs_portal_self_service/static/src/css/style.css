@@ -810,3 +810,45 @@ nav[aria-label="breadcrumb"] {
     transform: translateY(-5px);
     box-shadow: 0 10px 15px rgba(0,0,0,0.1), 0 20px 25px rgba(0,0,0,0.05);
 }
+
+/* ESS Theme Custom Styling for Portal Searchbar & Dropdowns */
+.o_portal_search_panel .dropdown-menu,
+.dropdown-menu {
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 25px rgba(76, 29, 149, 0.12) !important;
+    background-color: #ffffff !important;
+    padding: 6px 0 !important;
+}
+
+.o_portal_search_panel .dropdown-item,
+.dropdown-menu .dropdown-item {
+    color: #475569 !important;
+    font-size: 0.875rem !important;
+    padding: 8px 16px !important;
+    transition: all 0.2s ease !important;
+}
+
+.o_portal_search_panel .dropdown-item:hover,
+.o_portal_search_panel .dropdown-item:focus,
+.o_portal_search_panel .dropdown-item.active,
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus,
+.dropdown-menu .dropdown-item.active {
+    background-color: #f3e8ff !important;
+    color: #4c1d95 !important;
+    font-weight: 600 !important;
+}
+
+/* ESS Folded Group Row Styling */
+.ts-group-header-row {
+    background: #f8fafc !important;
+    color: #4c1d95 !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #ede9fe !important;
+    transition: background 0.2s ease !important;
+}
+
+.ts-group-header-row:hover {
+    background: #f3e8ff !important;
+}

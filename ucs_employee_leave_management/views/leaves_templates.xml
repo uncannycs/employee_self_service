@@ -131,11 +131,17 @@
                                         </td>
                                         <td><t t-esc="leave.name or ''"/></td>
                                         <td>
-                                            <t t-esc="leave.number_of_days"/>
-                                            <t t-if="leave.request_unit_half">
+                                            <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
+                                                <t t-esc="int(round((leave.number_of_hours or (leave.number_of_days * 8.0)) * 60))"/> min
+                                            </t>
+                                            <t t-elif="leave.request_unit_half">
+                                                <t t-esc="leave.number_of_days"/>
                                                 <small class="text-muted d-block">
                                                     (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
                                                 </small>
+                                            </t>
+                                            <t t-else="">
+                                                <t t-esc="leave.number_of_days"/>
                                             </t>
                                         </td>
                                         <td>
@@ -215,7 +221,7 @@
                                     </div>
                                     <div class="form-group d-flex align-items-center mb-0">
                                         <span class="mr-2" id="partial_text_prefix">Will come late by</span>
-                                        <input type="number" class="form-control text-center font-weight-bold mx-2" name="partial_minutes" value="60" min="1" max="60" style="width: 80px;"/>
+                                        <input type="number" class="form-control text-center font-weight-bold mx-2" name="partial_minutes" value="60" min="1" style="width: 100px;"/>
                                         <span class="ml-2">minutes</span>
                                     </div>
                                 </div>

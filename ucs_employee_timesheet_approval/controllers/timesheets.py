@@ -2,7 +2,7 @@
 from odoo import http, _
 from odoo.http import request
 import urllib.parse
-from odoo.addons.ucs_portal_self_service.controllers.timesheets import PortalCustomTimesheets
+from odoo.addons.ucs_portal_self_service.controllers.timesheets import PortalCustomTimesheets, _is_timesheet_manager
 
 class PortalCustomTimesheetsApproval(PortalCustomTimesheets):
 
@@ -42,6 +42,41 @@ class PortalCustomTimesheetsApproval(PortalCustomTimesheets):
                 error_msg = str(e).replace('\n', ' ')
                 return request.redirect('/my/timesheets?error=' + urllib.parse.quote(error_msg))
                 
+        return request.redirect('/my/timesheets')
+
+    @http.route(['/my/timesheets/approve/<int:line_id>'], type='http', auth="user", website=True)
+    def custom_timesheets_approve_single(self, line_id, **kw):
+        user = request.env.user
+        if _is_timesheet_manager(user):
+            line = request.env['account.analytic.line'].sudo().browse(line_id)
+            if line.exists() and line.state == 'confirm':
+                if (line.employee_id and line.employee_id.user_id and line.employee_id.user_id.id == user.id) or (line.user_id and line.user_id.id == user.id):
+                    error_msg = "You cannot approve your own timesheets."
+                    return request.redirect('/my/timesheets?error=' + urllib.parse.quote(error_msg))
+                try:
+                    line.action_approve()
+                except Exception as e:
+                    error_msg = str(e).replace('\n', ' ')
+                    return request.redirect('/my/timesheets?error=' + urllib.parse.quote(error_msg))
+        return request.redirect('/my/timesheets')
+
+    @http.route(['/my/timesheets/refuse'], type='http', auth="user", methods=['POST'], website=True)
+    def custom_timesheets_refuse(self, **post):
+        user = request.env.user
+        if _is_timesheet_manager(user):
+            line_id = int(post.get('line_id', 0))
+            reason = post.get('reason', '').strip()
+            if line_id and reason:
+                line = request.env['account.analytic.line'].sudo().browse(line_id)
+                if line.exists() and line.state == 'confirm':
+                    if (line.employee_id and line.employee_id.user_id and line.employee_id.user_id.id == user.id) or (line.user_id and line.user_id.id == user.id):
+                        error_msg = "You cannot refuse your own timesheets."
+                        return request.redirect('/my/timesheets?error=' + urllib.parse.quote(error_msg))
+                    try:
+                        line.action_refuse(reason)
+                    except Exception as e:
+                        error_msg = str(e).replace('\n', ' ')
+                        return request.redirect('/my/timesheets?error=' + urllib.parse.quote(error_msg))
         return request.redirect('/my/timesheets')
 
     @http.route(['/my/timesheets/edit'], type='http', auth="user", methods=['POST'], website=True)

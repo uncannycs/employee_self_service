@@ -48,11 +48,17 @@
                                                 <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
                                             </td>
                                             <td>
-                                                <t t-esc="leave.number_of_days"/>
-                                                <t t-if="leave.request_unit_half">
+                                                <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
+                                                    <t t-esc="int(round((leave.number_of_hours or (leave.number_of_days * 8.0)) * 60))"/> min
+                                                </t>
+                                                <t t-elif="leave.request_unit_half">
+                                                    <t t-esc="leave.number_of_days"/>
                                                     <small class="text-muted d-block">
                                                         (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
                                                     </small>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="leave.number_of_days"/>
                                                 </t>
                                             </td>
                                             <td>

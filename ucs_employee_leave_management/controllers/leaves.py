@@ -237,10 +237,18 @@ class PortalCustomLeaves(CustomerPortal):
                             data = item[1]
                             remaining = data.get('virtual_remaining_leaves', 0.0)
                             unit = data.get('request_unit', 'day')
-                            requested = temp_leave.number_of_hours if unit == 'hour' else temp_leave.number_of_days
+                            mins_hours = (int(partial_minutes) / 60.0) if (is_hourly and partial_minutes) else 0.0
+                            requested = (temp_leave.number_of_hours or mins_hours) if unit == 'hour' else temp_leave.number_of_days
                             
-                            if requested > remaining:
-                                raise Exception(f"You only have {remaining} {unit}(s) available. You cannot apply for {requested} {unit}(s).")
+                            if round(requested, 2) > round(remaining, 2):
+                                if is_hourly and partial_minutes:
+                                    remaining_mins = int(round(remaining * 60))
+                                    requested_mins = int(partial_minutes)
+                                    raise Exception(f"Insufficient leave balance. You only have {remaining_mins} minute(s) ({remaining} hour(s)) available, but requested {requested_mins} minute(s).")
+                                elif unit == 'hour':
+                                    raise Exception(f"Insufficient leave balance. You only have {remaining} hour(s) available, but requested {requested} hour(s).")
+                                else:
+                                    raise Exception(f"Insufficient leave balance. You only have {remaining} day(s) available, but requested {requested} day(s).")
                         break
 
                 create_vals = {

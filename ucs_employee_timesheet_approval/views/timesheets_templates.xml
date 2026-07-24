@@ -2,104 +2,9 @@
 <odoo>
     <template id="portal_my_timesheets_approval_override" inherit_id="ucs_portal_self_service.portal_my_timesheets_override" name="My Timesheets Approval">
         
-        <!-- Add Status and Actions to the Table Header -->
-        <xpath expr="//table[hasclass('ess-hist-table')]/thead/tr" position="inside">
-            <th>Status</th>
-            <th class="text-end">Actions</th>
-        </xpath>
-        
-        <!-- Add Colspan adjustment to group header if it exists -->
-        <xpath expr="//tr[hasclass('table-light')]/td[1]" position="attributes">
-            <attribute name="colspan">6</attribute>
-        </xpath>
-
-        <!-- Replace the entire table row to support inline editing -->
-        <xpath expr="//t[@t-foreach='timesheets_group']/tr" position="replace">
-            <form t-attf-id="edit_form_{{ ts.id }}" action="/my/timesheets/edit" method="post" class="d-none">
-                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                <input type="hidden" name="line_id" t-att-value="ts.id"/>
-            </form>
-            
-            <!-- Display Row -->
-            <tr t-attf-id="ts_display_{{ ts.id }}">
-                <td class="font-weight-bold"><t t-esc="ts.date"/></td>
-                <td><t t-esc="ts.name"/></td>
-                <td>
-                    <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
-                </td>
-                <td>
-                    <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
-                </td>
-                <td>
-                    <span class="ess-hrs-val"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></span>
-                </td>
-                <td>
-                    <t t-if="ts.state == 'draft'">
-                        <span class="badge bg-secondary text-white">Draft</span>
-                    </t>
-                    <t t-if="ts.state == 'confirm'">
-                        <span class="badge bg-info text-white">Submitted</span>
-                    </t>
-                    <t t-if="ts.state == 'approved'">
-                        <span class="badge bg-success text-white">Approved</span>
-                    </t>
-                    <t t-if="ts.state == 'refused'">
-                        <span class="badge bg-danger text-white">Refused</span>
-                        <i class="fa fa-info-circle text-danger ms-1" t-if="ts.reject_reason" t-att-title="ts.reject_reason" data-bs-toggle="tooltip"></i>
-                    </t>
-                </td>
-                <td class="text-end" style="min-width: 120px;">
-                    <t t-if="ts.state != 'approved'">
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" t-attf-onclick="document.getElementById('ts_display_{{ ts.id }}').classList.add('d-none'); document.getElementById('ts_edit_{{ ts.id }}').classList.remove('d-none');" title="Edit Inline">
-                            <i class="fa fa-pencil"></i>
-                        </button>
-                    </t>
-                    <t t-if="ts.state == 'draft'">
-                        <a t-attf-href="/my/timesheets/submit/{{ ts.id }}" class="btn btn-sm btn-primary" title="Submit">
-                            <i class="fa fa-paper-plane"></i> Submit
-                        </a>
-                    </t>
-                </td>
-            </tr>
-            
-            <!-- Inline Edit Row (Hidden by default) -->
-            <t t-if="ts.state != 'approved'">
-                <tr t-attf-id="ts_edit_{{ ts.id }}" class="d-none bg-light">
-                    <td>
-                        <input type="date" class="form-control form-control-sm" name="date" t-attf-form="edit_form_{{ ts.id }}" required="1" t-att-value="ts.date.strftime('%Y-%m-%d')"/>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm" name="name" t-attf-form="edit_form_{{ ts.id }}" required="1" t-att-value="ts.name"/>
-                    </td>
-                    <td>
-                        <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
-                    </td>
-                    <td>
-                        <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
-                    </td>
-                    <td>
-                        <t t-set="hours" t-value="int(ts.unit_amount)"/>
-                        <t t-set="minutes" t-value="int(round((ts.unit_amount - hours) * 60))"/>
-                        <input type="text" class="form-control form-control-sm" name="unit_amount_str" t-attf-form="edit_form_{{ ts.id }}" required="1" t-att-value="str(hours).zfill(2) + ':' + str(minutes).zfill(2)" placeholder="HH:MM" style="width: 80px;" pattern="^([0-9]{1,2}):([0-5][0-9])$"/>
-                    </td>
-                    <td>
-                        <span class="badge bg-warning text-dark">Editing...</span>
-                    </td>
-                    <td class="text-end" style="min-width: 120px;">
-                        <button type="button" class="btn btn-sm btn-secondary me-1" t-attf-onclick="document.getElementById('ts_edit_{{ ts.id }}').classList.add('d-none'); document.getElementById('ts_display_{{ ts.id }}').classList.remove('d-none');" title="Cancel">
-                            <i class="fa fa-times"></i>
-                        </button>
-                        <button type="submit" t-attf-form="edit_form_{{ ts.id }}" class="btn btn-sm btn-success" title="Save Changes">
-                            <i class="fa fa-save"></i>
-                        </button>
-                    </td>
-                </tr>
-            </t>
-        </xpath>
-
         <!-- Add a Submit To Manager button to the Hero Section and its Modal -->
-        <xpath expr="//div[hasclass('ess-hist-hero-inner')]/div[hasclass('d-flex')]" position="inside">
-            <button type="button" class="ess-hist-back-btn ml-3" style="background: var(--ess-primary); color: white; border: none;" data-bs-toggle="modal" data-bs-target="#submitTimesheetModal">
+        <xpath expr="//div[hasclass('ess-hist-hero-inner')]//a[contains(@href, '/my/dashboard')]" position="before">
+            <button type="button" class="ess-hist-back-btn mr-3" style="background: var(--ess-primary); color: white; border: none;" data-bs-toggle="modal" data-bs-target="#submitTimesheetModal">
                 <i class="fa fa-paper-plane"/> Submit To Manager
             </button>
             
@@ -135,8 +40,6 @@
                 </div>
             </div>
         </xpath>
-        
-        <!-- Hide the Log Time button if we want to restrict, but usually we just keep it -->
         
     </template>
 </odoo>

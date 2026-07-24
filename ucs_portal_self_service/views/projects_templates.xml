@@ -781,7 +781,7 @@
                                     <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
                                         <div class="form-group mb-4">
                                             <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Deadline</t><t t-else="">Deadline</t></label>
-                                            <input type="date" class="form-control" name="client_deadline" t-att-value="task.client_deadline.strftime('%Y-%m-%d') if hasattr(task, 'client_deadline') and task.client_deadline else ''" style="border-radius: 6px;"/>
+                                            <input type="date" class="form-control" name="client_deadline" t-att-value="task.client_deadline.strftime('%Y-%m-%d') if 'client_deadline' in task and task.client_deadline else ''" style="border-radius: 6px;"/>
                                         </div>
                                         <div class="form-group mb-3">
                                             <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Allocated Hours</t><t t-else="">Allocated Hours</t></label>

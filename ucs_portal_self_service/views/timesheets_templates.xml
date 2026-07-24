@@ -59,64 +59,195 @@
             </t>
 
             <div class="ess-hist-body">
+                <!-- Manager Nav Tabs: MY TIMESHEETS vs ALL TIMESHEETS (Exact match to Approvals menu) -->
+                <t t-if="is_timesheet_manager">
+                    <div class="ess-sub-nav bg-white shadow-sm border-bottom mb-4" style="padding: 0 20px; display: flex; overflow-x: auto; white-space: nowrap; border-radius: 8px;">
+                        <ul class="nav" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; width: 100%;">
+                            <li class="nav-item" role="presentation">
+                                <a t-attf-href="/my/timesheets?scope=my{{ ('&amp;groupby=' + groupby) if groupby != 'none' else '' }}{{ ('&amp;filterby=' + filterby) if filterby and filterby != 'all' else '' }}{{ ('&amp;search=' + search) if search else '' }}" 
+                                   t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope != 'all' else '' }}" 
+                                   t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope != 'all' else 'transparent') + '; opacity: ' + ('1' if scope != 'all' else '0.6') + ';'">
+                                    MY TIMESHEETS
+                                </a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a t-attf-href="/my/timesheets?scope=all{{ ('&amp;groupby=' + groupby) if groupby != 'none' else '' }}{{ ('&amp;filterby=' + filterby) if filterby and filterby != 'all' else '' }}{{ ('&amp;search=' + search) if search else '' }}" 
+                                   t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope == 'all' else '' }}" 
+                                   t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope == 'all' else 'transparent') + '; opacity: ' + ('1' if scope == 'all' else '0.6') + ';'">
+                                    ALL TIMESHEETS
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </t>
+
                 <div class="ess-hist-table-wrap">
                     <table class="ess-hist-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
+                                <th>Employee</th>
                                 <th>Description</th>
                                 <th>Project</th>
                                 <th>Task</th>
                                 <th>Hours</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <t t-if="not grouped_timesheets">
                                 <tr>
-                                    <td colspan="5" class="ess-empty-row">
+                                    <td colspan="8" class="ess-empty-row">
                                         <i class="fa fa-inbox fa-2x"/>
                                         <div>No timesheets logged yet.</div>
                                     </td>
                                 </tr>
                             </t>
-                            <t t-if="grouped_timesheets">
-                                <t t-foreach="grouped_timesheets" t-as="timesheets_with_hours">
-                                    <t t-set="timesheets_group" t-value="timesheets_with_hours[0]"/>
-                                    <t t-set="hours_spent" t-value="timesheets_with_hours[1]"/>
-                                    
-                                    <tr t-if="groupby != 'none'" class="table-light font-weight-bold" style="background: var(--ess-light); color: var(--ess-primary);">
-                                        <t t-if="groupby == 'project_id'">
-                                            <td colspan="4">Project: <t t-esc="timesheets_group[0].project_id.name"/></td>
-                                        </t>
-                                        <t t-elif="groupby == 'task_id'">
-                                            <td colspan="4">Task: <t t-esc="timesheets_group[0].task_id.name if timesheets_group[0].task_id else 'No Task'"/></td>
-                                        </t>
-                                        <t t-elif="groupby == 'date'">
-                                            <td colspan="4">Date: <t t-esc="timesheets_group[0].date"/></td>
-                                        </t>
-                                        <t t-elif="groupby == 'employee_id'">
-                                            <td colspan="4">Employee: <t t-esc="timesheets_group[0].employee_id.name"/></td>
-                                        </t>
-                                        <t t-else="">
-                                            <td colspan="4">Group</td>
-                                        </t>
-                                        <td><t t-esc="hours_spent" t-options='{"widget": "float_time"}'/> Hours</td>
-                                    </tr>
-                                    
-                                    <t t-foreach="timesheets_group" t-as="ts">
-                                        <tr>
-                                            <td class="font-weight-bold"><t t-esc="ts.date"/></td>
-                                            <td><t t-esc="ts.name"/></td>
-                                            <td>
-                                                <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
+                            <t t-if="flat_group_rows">
+                                <t t-foreach="flat_group_rows" t-as="row">
+                                    <!-- Group Header Row -->
+                                    <t t-if="row['type'] == 'header'">
+                                        <tr t-attf-class="ts-group-header-row font-weight-bold {{ ('ts-group-child ' + row['parent_class']) if row['parent_class'] != 'grp' else '' }}"
+                                            t-attf-data-group-target="{{ row['my_class'] }}"
+                                            t-attf-style="{{ ('display: none;' if row['parent_class'] != 'grp' else '') }} background: {{ row['bg_color'] }}; color: #3b0764; cursor: pointer; user-select: none;">
+                                            <td colspan="7" t-attf-style="padding-left: {{ row['padding_left'] }}px;">
+                                                <i class="fa fa-chevron-right me-2 ts-group-icon" style="transition: transform 0.2s ease; width: 14px; text-align: center; color: #4c1d95;"/>
+                                                <t t-esc="row['label']"/>
+                                                <span class="badge bg-secondary ms-2 rounded-pill font-weight-normal" style="font-size: 0.75rem;">
+                                                    <t t-esc="row['count']"/> record(s)
+                                                </span>
                                             </td>
-                                            <td>
-                                                <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
-                                            </td>
-                                            <td>
-                                                <span class="ess-hrs-val"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></span>
+                                            <td class="text-end font-weight-bold">
+                                                <t t-esc="row['hours']" t-options='{"widget": "float_time"}'/> Hours
                                             </td>
                                         </tr>
+                                    </t>
+
+                                    <!-- Timesheet Item Row -->
+                                    <t t-elif="row['type'] == 'timesheet'">
+                                        <t t-set="ts" t-value="row['timesheet']"/>
+                                        <form t-attf-id="edit_form_{{ ts.id }}" action="/my/timesheets/edit" method="post" class="d-none">
+                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                            <input type="hidden" name="line_id" t-att-value="ts.id"/>
+                                        </form>
+
+                                        <!-- Display Row -->
+                                        <tr t-attf-id="ts_display_{{ ts.id }}" class="ts-item-row"
+                                            t-attf-class="{{ ('ts-group-child ' + row['parent_class']) if row['parent_class'] else '' }}"
+                                            t-att-style="'display: none;' if groupby != 'none' else ''">
+                                            <td class="font-weight-bold"><t t-esc="ts.date"/></td>
+                                            <td><span class="font-weight-bold text-dark"><t t-esc="ts.employee_id.name if ts.employee_id else ''"/></span></td>
+                                            <td><t t-esc="ts.name"/></td>
+                                            <td><span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span></td>
+                                            <td><span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span></td>
+                                            <td><span class="ess-hrs-val"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></span></td>
+                                            <td>
+                                                <t t-if="ts.state == 'draft'">
+                                                    <span class="badge bg-secondary text-white">Draft</span>
+                                                </t>
+                                                <t t-elif="ts.state == 'confirm'">
+                                                    <span class="badge bg-info text-white">Submitted</span>
+                                                </t>
+                                                <t t-elif="ts.state == 'approved'">
+                                                    <span class="badge bg-success text-white">Approved</span>
+                                                </t>
+                                                <t t-elif="ts.state == 'refused'">
+                                                    <span class="badge bg-danger text-white">Refused</span>
+                                                    <i class="fa fa-info-circle text-danger ms-1" t-if="ts.reject_reason" t-att-title="ts.reject_reason" data-bs-toggle="tooltip"></i>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-secondary text-white"><t t-esc="ts.state or 'Draft'"/></span>
+                                                </t>
+                                            </td>
+                                            <td class="text-end" style="min-width: 140px;">
+                                                <t t-if="ts.state != 'approved'">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" t-attf-onclick="document.getElementById('ts_display_{{ ts.id }}').style.display='none'; var er = document.getElementById('ts_edit_{{ ts.id }}'); er.classList.remove('d-none'); er.style.display='table-row';" title="Edit Inline">
+                                                        <i class="fa fa-pencil"></i>
+                                                    </button>
+                                                </t>
+                                                <t t-if="ts.state == 'draft'">
+                                                    <a t-attf-href="/my/timesheets/submit/{{ ts.id }}" class="btn btn-sm btn-primary" title="Submit">
+                                                        <i class="fa fa-paper-plane"></i> Submit
+                                                    </a>
+                                                </t>
+                                                <t t-if="ts.state == 'confirm' and is_timesheet_manager and (not ts.employee_id or not ts.employee_id.user_id or ts.employee_id.user_id.id != request.env.user.id) and (not ts.user_id or ts.user_id.id != request.env.user.id)">
+                                                    <a t-attf-href="/my/timesheets/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">
+                                                        <i class="fa fa-check"></i> Approve
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" t-attf-data-bs-target="#refuseModal_{{ ts.id }}" title="Refuse">
+                                                        <i class="fa fa-times"></i>
+                                                    </button>
+
+                                                    <!-- Refuse Modal -->
+                                                    <div class="modal fade" t-attf-id="refuseModal_{{ ts.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                                        <div class="modal-dialog modal-dialog-centered" role="document">
+                                                            <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                                                                <form action="/my/timesheets/refuse" method="post">
+                                                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                                    <input type="hidden" name="line_id" t-att-value="ts.id"/>
+                                                                    <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                                                        <h5 class="modal-title font-weight-bold text-dark">Refuse Timesheet</h5>
+                                                                        <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                                                            <span aria-hidden="true">&amp;times;</span>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="modal-body px-4 pt-3 text-start">
+                                                                        <p class="text-muted small">Please specify reason for refusing this timesheet line.</p>
+                                                                        <div class="form-group mb-3">
+                                                                            <label class="text-muted small font-weight-bold">Reason</label>
+                                                                            <textarea class="form-control" name="reason" required="1" rows="3" placeholder="Enter reason for refusal..."></textarea>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                        <button type="submit" class="btn btn-danger">Refuse Timesheet</button>
+                                                                    </div>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </t>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Edit Row -->
+                                        <t t-if="ts.state != 'approved'">
+                                            <tr t-attf-id="ts_edit_{{ ts.id }}"
+                                                t-attf-class="ts-group-child {{ row['parent_class'] }} d-none bg-light" style="display: none !important;">
+                                                <td>
+                                                    <input type="date" class="form-control form-control-sm" name="date" t-attf-form="edit_form_{{ ts.id }}" required="1" t-att-value="ts.date.strftime('%Y-%m-%d')"/>
+                                                </td>
+                                                <td>
+                                                    <span class="font-weight-bold text-dark"><t t-esc="ts.employee_id.name if ts.employee_id else ''"/></span>
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm" name="name" t-attf-form="edit_form_{{ ts.id }}" required="1" t-att-value="ts.name"/>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
+                                                </td>
+                                                <td>
+                                                    <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
+                                                </td>
+                                                <td>
+                                                    <t t-set="hours" t-value="int(ts.unit_amount)"/>
+                                                    <t t-set="minutes" t-value="int(round((ts.unit_amount - hours) * 60))"/>
+                                                    <input type="text" class="form-control form-control-sm" name="unit_amount_str" t-attf-form="edit_form_{{ ts.id }}" required="1" t-att-value="str(hours).zfill(2) + ':' + str(minutes).zfill(2)" placeholder="HH:MM" style="width: 80px;" pattern="^([0-9]{1,2}):([0-5][0-9])$"/>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-warning text-dark">Editing...</span>
+                                                </td>
+                                                <td class="text-end" style="min-width: 120px;">
+                                                    <button type="button" class="btn btn-sm btn-secondary me-1" t-attf-onclick="var er = document.getElementById('ts_edit_{{ ts.id }}'); er.classList.add('d-none'); er.style.display='none'; document.getElementById('ts_display_{{ ts.id }}').style.display='';" title="Cancel">
+                                                        <i class="fa fa-times"></i>
+                                                    </button>
+                                                    <button type="submit" t-attf-form="edit_form_{{ ts.id }}" class="btn btn-sm btn-success" title="Save Changes">
+                                                        <i class="fa fa-save"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </t>
                                     </t>
                                 </t>
                             </t>
@@ -124,6 +255,39 @@
                     </table>
                 </div>
             </div>
+
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.addEventListener('click', function(e) {
+                        var headerRow = e.target.closest('.ts-group-header-row');
+                        if (headerRow) {
+                            var targetClass = headerRow.getAttribute('data-group-target');
+                            var icon = headerRow.querySelector('.ts-group-icon');
+                            var childRows = document.querySelectorAll('.' + targetClass);
+                            
+                            var isExpanded = false;
+                            childRows.forEach(function(row) {
+                                if (row.style.display === 'none' || row.style.display === '') {
+                                    row.style.display = 'table-row';
+                                    isExpanded = true;
+                                } else {
+                                    row.style.display = 'none';
+                                }
+                            });
+                            
+                            if (icon) {
+                                if (isExpanded) {
+                                    icon.classList.remove('fa-chevron-right');
+                                    icon.classList.add('fa-chevron-down');
+                                } else {
+                                    icon.classList.remove('fa-chevron-down');
+                                    icon.classList.add('fa-chevron-right');
+                                }
+                            }
+                        }
+                    });
+                });
+            </script>
 
             <!-- New Timesheet Modal -->
             <div class="modal fade" id="newTimesheetModal" tabindex="-1" role="dialog" aria-hidden="true">
