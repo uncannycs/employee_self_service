@@ -28,10 +28,10 @@
             <field name="comment">Allows portal users to create new tasks within projects.</field>
         </record>
 
-        <!-- Log Timesheet Group -->
+        <!-- Log / Show Timesheet Group -->
         <record id="group_portal_timesheet_log" model="res.groups">
-            <field name="name">Can Log Portal Timesheets</field>
-            <field name="comment">Allows portal users to view and log timesheets on tasks.</field>
+            <field name="name">Can show Portal Timesheets</field>
+            <field name="comment">Allows customer portal users to view timesheets on tasks.</field>
         </record>
 
         <record id="group_custom_project_manager" model="res.groups">

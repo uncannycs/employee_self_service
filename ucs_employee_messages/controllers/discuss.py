@@ -2,6 +2,7 @@
 import html
 from odoo import http, fields, _
 from odoo.http import request
+from markupsafe import Markup
 from werkzeug.exceptions import NotFound, Forbidden
 
 class PortalDiscuss(http.Controller):
@@ -187,11 +188,11 @@ class PortalDiscuss(http.Controller):
         for partner in mentioned_partners:
             mention_str = f"@{partner.name}"
             if mention_str in body:
-                html_mention = f'<a href="#" data-oe-model="res.partner" data-oe-id="{partner.id}">{mention_str}</a>'
+                html_mention = f'<a href="#" class="o_mail_redirect" data-oe-model="res.partner" data-oe-id="{partner.id}">@{partner.name}</a>'
                 body = body.replace(mention_str, html_mention)
                 
         message = channel.sudo().message_post(
-            body=body,
+            body=Markup(body) if isinstance(body, str) else body,
             message_type='comment',
             subtype_xmlid='mail.mt_comment',
             author_id=partner.id,

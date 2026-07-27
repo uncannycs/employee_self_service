@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields
+from markupsafe import Markup
 
 
 class ProjectTask(models.Model):
@@ -31,14 +32,14 @@ class ProjectTask(models.Model):
                 mention_str = f"@{partner.name}"
                 if mention_str in body:
                     html_mention = (
-                        f'<a href="#" data-oe-model="res.partner"'
-                        f' data-oe-id="{partner.id}">{mention_str}</a>'
+                        f'<a href="#" class="o_mail_redirect" data-oe-model="res.partner"'
+                        f' data-oe-id="{partner.id}">@{partner.name}</a>'
                     )
                     body = body.replace(mention_str, html_mention)
                     if partner.id not in mentioned_partner_ids:
                         mentioned_partner_ids.append(partner.id)
 
-            kwargs['body'] = body
+            kwargs['body'] = Markup(body) if isinstance(body, str) else body
             kwargs['partner_ids'] = mentioned_partner_ids
 
         message = super(ProjectTask, self).message_post(**kwargs)
@@ -78,7 +79,7 @@ class ProjectTask(models.Model):
                 f"<strong>{author_name}</strong> — Task: {task_link}"
                 f"</div>"
             )
-            new_body = f"{prefix}{body_forwarded}"
+            new_body = Markup(f"{prefix}{body_forwarded}")
 
             task_channel.sudo().with_context(
                 skip_task_forwarding=True

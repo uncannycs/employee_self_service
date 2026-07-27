@@ -90,37 +90,135 @@
 
             <t t-if="not projects">
                 <div class="alert alert-warning mt-3" role="alert">
-                    There are currently no projects for your account.
+                    There are currently no projects matching your filter.
                 </div>
             </t>
 
-            <div t-if="projects" class="ess-menu-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
-                <t t-foreach="projects" t-as="project">
-                    <a t-attf-href="/my/projects/#{project.id}" class="ess-menu-card" style="align-items: flex-start; text-align: left; padding: 20px;">
-                        <div class="d-flex w-100 justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 text-truncate" style="color: var(--ess-primary); font-weight: 700;"><t t-esc="project.name"/></h5>
-                            <span class="badge badge-pill badge-light" style="background: var(--ess-light); color: var(--ess-violet);"><t t-esc="project.task_count"/> Tasks</span>
-                        </div>
-                        <div class="text-muted" style="font-size: 0.85rem; height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                            <t t-if="project.description" t-esc="project.description"/>
-                            <t t-else="">No description provided.</t>
-                        </div>
-                        
-                        <div class="d-flex w-100 align-items-center mt-3 pt-3 border-top" style="border-color: var(--ess-border) !important;">
-                            <t t-if="project.user_id">
-                                <img t-attf-src="/web/image/res.users/#{project.user_id.id}/avatar_128" 
-                                     class="rounded-circle mr-2" style="width: 28px; height: 28px; object-fit: cover;"
-                                     t-att-alt="project.user_id.name"/>
-                                <span style="font-size: 0.8rem; color: #6b7280;"><t t-esc="project.user_id.name"/></span>
+            <!-- Grouped Multi-Level Table View -->
+            <t t-if="projects and groupby != 'none' and flat_group_rows">
+                <div class="ess-hist-table-wrap mb-4" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <table class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
+                        <thead>
+                            <tr style="background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Project Name</th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Customer</th>
+                                <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Manager</th>
+                                <th class="text-end" style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Tasks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="flat_group_rows" t-as="row">
+                                <t t-if="row['type'] == 'header'">
+                                    <tr t-attf-class="prj-group-header-row font-weight-bold {{ ('prj-group-child ' + row['parent_class']) if row['parent_class'] != 'pgrp' else '' }}"
+                                        t-attf-data-group-target="{{ row['my_class'] }}"
+                                        t-attf-style="{{ ('display: none;' if row['parent_class'] != 'pgrp' else '') }} background: {{ row['bg_color'] }}; color: #3b0764; cursor: pointer; user-select: none;">
+                                        <td colspan="3" t-attf-style="padding-left: {{ row['padding_left'] }}px; padding-top: 10px; padding-bottom: 10px;">
+                                            <i class="fa fa-chevron-right me-2 prj-group-icon" style="transition: transform 0.2s ease; width: 14px; text-align: center; color: #4c1d95;"/>
+                                            <t t-esc="row['label']"/>
+                                            <span class="badge bg-secondary ms-2 rounded-pill font-weight-normal" style="font-size: 0.75rem;">
+                                                <t t-esc="row['count']"/> project(s)
+                                            </span>
+                                        </td>
+                                        <td class="text-end font-weight-bold" style="padding-top: 10px; padding-bottom: 10px;">
+                                            <t t-esc="row['task_count']"/> Tasks
+                                        </td>
+                                    </tr>
+                                </t>
+                                <t t-elif="row['type'] == 'project'">
+                                    <t t-set="project" t-value="row['project']"/>
+                                    <tr class="prj-item-row"
+                                        t-attf-class="{{ ('prj-group-child ' + row['parent_class']) if row['parent_class'] else '' }}"
+                                        style="display: none;">
+                                        <td style="padding: 12px 15px;">
+                                            <a t-attf-href="/my/projects/#{project.id}" class="font-weight-bold text-decoration-none" style="color: var(--ess-primary, #4a148c); font-size: 0.95rem;">
+                                                <i class="fa fa-folder-o me-2 text-muted"/> <t t-esc="project.name"/>
+                                            </a>
+                                        </td>
+                                        <td style="padding: 12px 15px;">
+                                            <span class="text-muted" style="font-size: 0.9rem;"><t t-esc="project.partner_id.name if project.partner_id else '-'"/></span>
+                                        </td>
+                                        <td style="padding: 12px 15px;">
+                                            <t t-if="project.user_id">
+                                                <span class="badge bg-light text-dark border"><t t-esc="project.user_id.name"/></span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-muted small">No Manager</span>
+                                            </t>
+                                        </td>
+                                        <td class="text-end font-weight-bold" style="padding: 12px 15px;">
+                                            <span class="badge badge-pill badge-light" style="background: var(--ess-light); color: var(--ess-violet); font-size: 0.85rem;"><t t-esc="project.task_count"/> Tasks</span>
+                                        </td>
+                                    </tr>
+                                </t>
                             </t>
-                            <t t-else="">
-                                <span style="font-size: 0.8rem; color: #9ca3af;">No Project Manager</span>
-                            </t>
-                        </div>
-                    </a>
-                </t>
-            </div>
-                <div t-if="pager" class="o_portal_pager text-center mt-4 mb-4"><t t-call="portal.pager"/></div>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+
+            <!-- Standard Card Grid View when GroupBy is None -->
+            <t t-if="projects and groupby == 'none'">
+                <div class="ess-menu-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                    <t t-foreach="projects" t-as="project">
+                        <a t-attf-href="/my/projects/#{project.id}" class="ess-menu-card" style="align-items: flex-start; text-align: left; padding: 20px;">
+                            <div class="d-flex w-100 justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0 text-truncate" style="color: var(--ess-primary); font-weight: 700;"><t t-esc="project.name"/></h5>
+                                <span class="badge badge-pill badge-light" style="background: var(--ess-light); color: var(--ess-violet);"><t t-esc="project.task_count"/> Tasks</span>
+                            </div>
+                            <div class="text-muted" style="font-size: 0.85rem; height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                <t t-if="project.description" t-esc="project.description"/>
+                                <t t-else="">No description provided.</t>
+                            </div>
+                            
+                            <div class="d-flex w-100 align-items-center mt-3 pt-3 border-top" style="border-color: var(--ess-border) !important;">
+                                <t t-if="project.user_id">
+                                    <img t-attf-src="/web/image/res.users/#{project.user_id.id}/avatar_128" 
+                                         class="rounded-circle mr-2" style="width: 28px; height: 28px; object-fit: cover;"
+                                         t-att-alt="project.user_id.name"/>
+                                    <span style="font-size: 0.8rem; color: #6b7280;"><t t-esc="project.user_id.name"/></span>
+                                </t>
+                                <t t-else="">
+                                    <span style="font-size: 0.8rem; color: #9ca3af;">No Project Manager</span>
+                                </t>
+                            </div>
+                        </a>
+                    </t>
+                </div>
+            </t>
+
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.addEventListener('click', function(e) {
+                        var headerRow = e.target.closest('.prj-group-header-row');
+                        if (headerRow) {
+                            var targetClass = headerRow.getAttribute('data-group-target');
+                            var icon = headerRow.querySelector('.prj-group-icon');
+                            var childRows = document.querySelectorAll('.' + targetClass);
+                            
+                            var isExpanded = false;
+                            childRows.forEach(function(row) {
+                                if (row.style.display === 'none' || row.style.display === '') {
+                                    row.style.display = 'table-row';
+                                    isExpanded = true;
+                                } else {
+                                    row.style.display = 'none';
+                                }
+                            });
+                            
+                            if (icon) {
+                                if (isExpanded) {
+                                    icon.classList.remove('fa-chevron-right');
+                                    icon.classList.add('fa-chevron-down');
+                                } else {
+                                    icon.classList.remove('fa-chevron-down');
+                                    icon.classList.add('fa-chevron-right');
+                                }
+                            }
+                        }
+                    });
+                });
+            </script>
+            <div t-if="pager" class="o_portal_pager text-center mt-4 mb-4"><t t-call="portal.pager"/></div>
             </div>
         </t>
         </xpath>
@@ -260,17 +358,17 @@
                 </div>
             </t>
 
-            <!-- Kanban View -->
+            <!-- Kanban View (Dynamic Columns based on GroupBy) -->
             <t t-if="view_type == 'kanban'">
                 <div class="ess-kanban-board">
-                    <t t-foreach="stages" t-as="stage">
-                        <div class="ess-kanban-col" t-att-data-stage-id="stage.id">
+                    <t t-foreach="kanban_columns" t-as="col">
+                        <div class="ess-kanban-col" t-att-data-column-id="col['id']">
                             <div class="ess-kanban-col-header">
-                                <h6 class="ess-kanban-col-title"><t t-esc="stage.name"/></h6>
-                                <span class="badge badge-pill badge-light text-muted"><t t-esc="len(tasks_by_stage.get(stage.id, []))"/></span>
+                                <h6 class="ess-kanban-col-title"><t t-esc="col['title']"/></h6>
+                                <span class="badge badge-pill badge-light text-muted"><t t-esc="len(col['tasks'])"/></span>
                             </div>
                             <div class="ess-kanban-cards-container">
-                                <t t-foreach="tasks_by_stage.get(stage.id, [])" t-as="task">
+                                <t t-foreach="col['tasks']" t-as="task">
                                     <div class="ess-kanban-card" draggable="true" t-att-data-task-id="task.id">
                                         <div class="ess-task-prio-ribbon" t-att-data-prio="task.priority"/>
                                         <div class="ess-kanban-card-title">
@@ -388,16 +486,110 @@
                 </div>
             </t>
             
-            <!-- List View -->
+            <!-- List View (Multi-Level GroupBy or Standard List) -->
             <t t-if="view_type == 'list'">
-                <div class="ess-hist-body" style="padding: 20px;">
-                    <t t-if="not grouped_tasks">
-                        <div class="alert alert-warning" role="alert">
-                            There are no tasks matching your search.
-                        </div>
-                    </t>
-                    <t t-call="project.portal_tasks_list"/>
-                </div>
+                <t t-if="groupby != 'none' and flat_group_rows">
+                    <div class="ess-hist-table-wrap mb-4" style="background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 15px;">
+                        <table class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
+                            <thead>
+                                <tr style="background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
+                                    <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Task Title</th>
+                                    <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Stage</th>
+                                    <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Assignees</th>
+                                    <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Deadline</th>
+                                    <th class="text-end" style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Allocated Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="flat_group_rows" t-as="row">
+                                    <t t-if="row['type'] == 'header'">
+                                        <tr t-attf-class="tsk-group-header-row font-weight-bold {{ ('tsk-group-child ' + row['parent_class']) if row['parent_class'] != 'tgrp' else '' }}"
+                                            t-attf-data-group-target="{{ row['my_class'] }}"
+                                            t-attf-style="{{ ('display: none;' if row['parent_class'] != 'tgrp' else '') }} background: {{ row['bg_color'] }}; color: #3b0764; cursor: pointer; user-select: none;">
+                                            <td colspan="4" t-attf-style="padding-left: {{ row['padding_left'] }}px; padding-top: 10px; padding-bottom: 10px;">
+                                                <i class="fa fa-chevron-right me-2 tsk-group-icon" style="transition: transform 0.2s ease; width: 14px; text-align: center; color: #4c1d95;"/>
+                                                <t t-esc="row['label']"/>
+                                                <span class="badge bg-secondary ms-2 rounded-pill font-weight-normal" style="font-size: 0.75rem;">
+                                                    <t t-esc="row['count']"/> task(s)
+                                                </span>
+                                            </td>
+                                            <td class="text-end font-weight-bold" style="padding-top: 10px; padding-bottom: 10px;">
+                                                <t t-esc="row['allocated_hours']" t-options='{"widget": "float_time"}'/> Hours
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <t t-elif="row['type'] == 'task'">
+                                        <t t-set="task" t-value="row['task']"/>
+                                        <tr class="tsk-item-row"
+                                            t-attf-class="{{ ('tsk-group-child ' + row['parent_class']) if row['parent_class'] else '' }}"
+                                            style="display: none;">
+                                            <td style="padding: 12px 15px;">
+                                                <a t-attf-href="/my/tasks/#{task.id}" class="font-weight-bold text-decoration-none" style="color: var(--ess-primary, #4a148c); font-size: 0.95rem;">
+                                                    <i class="fa fa-tasks me-2 text-muted"/> <t t-esc="task.name"/>
+                                                </a>
+                                            </td>
+                                            <td style="padding: 12px 15px;">
+                                                <span class="badge badge-light text-primary" style="background: var(--ess-light); color: var(--ess-violet); font-size: 0.85rem;"><t t-esc="task.stage_id.name if task.stage_id else '-'"/></span>
+                                            </td>
+                                            <td style="padding: 12px 15px;">
+                                                <span class="text-muted" style="font-size: 0.85rem;"><t t-esc="', '.join(task.user_ids.mapped('name')) if task.user_ids else 'Unassigned'"/></span>
+                                            </td>
+                                            <td style="padding: 12px 15px;">
+                                                <span class="text-muted small"><t t-esc="task.date_deadline or '-'"/></span>
+                                            </td>
+                                            <td class="text-end font-weight-bold" style="padding: 12px 15px;">
+                                                <span class="ess-hrs-val"><t t-esc="task.allocated_hours" t-options='{"widget": "float_time"}'/></span>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <script type="text/javascript">
+                        document.addEventListener('DOMContentLoaded', function() {
+                            document.addEventListener('click', function(e) {
+                                var headerRow = e.target.closest('.tsk-group-header-row');
+                                if (headerRow) {
+                                    var targetClass = headerRow.getAttribute('data-group-target');
+                                    var icon = headerRow.querySelector('.tsk-group-icon');
+                                    var childRows = document.querySelectorAll('.' + targetClass);
+                                    
+                                    var isExpanded = false;
+                                    childRows.forEach(function(row) {
+                                        if (row.style.display === 'none' || row.style.display === '') {
+                                            row.style.display = 'table-row';
+                                            isExpanded = true;
+                                        } else {
+                                            row.style.display = 'none';
+                                        }
+                                    });
+                                    
+                                    if (icon) {
+                                        if (isExpanded) {
+                                            icon.classList.remove('fa-chevron-right');
+                                            icon.classList.add('fa-chevron-down');
+                                        } else {
+                                            icon.classList.remove('fa-chevron-down');
+                                            icon.classList.add('fa-chevron-right');
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                    </script>
+                </t>
+                <t t-else="">
+                    <div class="ess-hist-body" style="padding: 20px;">
+                        <t t-if="not grouped_tasks">
+                            <div class="alert alert-warning" role="alert">
+                                There are no tasks matching your search.
+                            </div>
+                        </t>
+                        <t t-call="project.portal_tasks_list"/>
+                    </div>
+                </t>
             </t>
             
             <!-- JS for Kanban Drag and Drop -->

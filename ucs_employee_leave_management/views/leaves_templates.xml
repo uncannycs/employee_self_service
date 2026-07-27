@@ -221,7 +221,7 @@
                                     </div>
                                     <div class="form-group d-flex align-items-center mb-0">
                                         <span class="mr-2" id="partial_text_prefix">Will come late by</span>
-                                        <input type="number" class="form-control text-center font-weight-bold mx-2" name="partial_minutes" value="60" min="1" style="width: 100px;"/>
+                                        <input type="number" class="form-control text-center font-weight-bold mx-2" name="partial_minutes" value="60" min="1" readonly="1" style="width: 100px; background-color: #e9ecef; cursor: not-allowed;"/>
                                         <span class="ml-2">minutes</span>
                                     </div>
                                 </div>
