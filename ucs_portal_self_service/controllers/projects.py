@@ -593,6 +593,14 @@ class PortalCustomProjects(ProjectCustomerPortal):
         user = request.env.user
         is_employee = bool(request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)) or user.has_group('base.group_user')
         assignable_users = request.env['res.users'].sudo().search([])
+        
+        timesheets = values.get('timesheets')
+        if timesheets and not is_employee:
+            # Customer Portal User: show approved timesheets only
+            if 'state' in timesheets._fields:
+                timesheets = timesheets.filtered(lambda ts: ts.state == 'approved')
+            values['timesheets'] = timesheets
+
         values['is_employee'] = is_employee
         values['assignable_users'] = assignable_users
         return values

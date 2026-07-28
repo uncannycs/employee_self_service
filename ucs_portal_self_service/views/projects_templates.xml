@@ -754,23 +754,48 @@
                                                 <th>Date</th>
                                                 <th>Description</th>
                                                 <th>Employee</th>
+                                                <t t-if="is_employee">
+                                                    <th>Status</th>
+                                                </t>
                                                 <th class="text-right">Hours</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <t t-if="timesheets">
                                                 <t t-foreach="timesheets" t-as="ts">
-                                                    <tr>
-                                                        <td><t t-esc="ts.date"/></td>
-                                                        <td><t t-esc="ts.name"/></td>
-                                                        <td><t t-esc="ts.employee_id.name"/></td>
-                                                        <td class="text-right"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></td>
-                                                    </tr>
+                                                    <t t-set="ts_st" t-value="ts.state or 'approved'"/>
+                                                    <t t-if="is_employee or ts_st == 'approved'">
+                                                        <tr>
+                                                            <td><t t-esc="ts.date"/></td>
+                                                            <td><t t-esc="ts.name"/></td>
+                                                            <td><t t-esc="ts.employee_id.name"/></td>
+                                                            <t t-if="is_employee">
+                                                                <td>
+                                                                    <t t-if="ts_st == 'draft'">
+                                                                        <span class="badge bg-secondary rounded-pill">Draft</span>
+                                                                    </t>
+                                                                    <t t-elif="ts_st == 'confirm'">
+                                                                        <span class="badge bg-warning text-dark rounded-pill">Submitted</span>
+                                                                    </t>
+                                                                    <t t-elif="ts_st == 'approved'">
+                                                                        <span class="badge bg-success rounded-pill">Approved</span>
+                                                                    </t>
+                                                                    <t t-elif="ts_st == 'refused'">
+                                                                        <span class="badge bg-danger rounded-pill">Refused</span>
+                                                                    </t>
+                                                                    <t t-else="">
+                                                                        <span class="badge bg-light text-dark rounded-pill"><t t-esc="ts_st"/></span>
+                                                                    </t>
+                                                                </td>
+                                                            </t>
+                                                            <td class="text-right"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></td>
+                                                        </tr>
+                                                    </t>
                                                 </t>
                                             </t>
                                             <t t-else="">
                                                 <tr>
-                                                    <td colspan="4" class="text-center text-muted font-italic pt-4 pb-4">
+                                                    <td t-att-colspan="5 if is_employee else 4" class="text-center text-muted font-italic pt-4 pb-4">
                                                         No timesheets logged for this task yet.
                                                     </td>
                                                 </tr>

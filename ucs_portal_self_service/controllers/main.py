@@ -11,6 +11,16 @@ def _get_employee(user):
     return employee
 
 
+def _format_hours(hours):
+    """Convert float hours to HH:MM format."""
+    if not hours:
+        return '00:00'
+    total_seconds = int(round(hours * 3600))
+    hrs = total_seconds // 3600
+    mins = (total_seconds % 3600) // 60
+    return f"{hrs:02d}:{mins:02d}"
+
+
 def _to_user_time(dt_utc, user_tz):
     """Convert naive UTC datetime to user's local time string HH:MM."""
     if not dt_utc:
@@ -63,7 +73,7 @@ def _attendance_values(employee):
     return {
         'is_checked_in': bool(open_att),
         'check_in_time': check_in_time_str,
-        'hours_today': '%.2f' % hours_today,
+        'hours_today': _format_hours(hours_today),
         'elapsed_seconds': elapsed_seconds,
         'check_in_unix': check_in_unix,  # UTC unix timestamp for JS
     }
@@ -265,7 +275,7 @@ class CustomCustomerPortal(CustomerPortal):
             attendances.append({
                 'check_in': ci_local.strftime('%d/%m/%Y %H:%M') if ci_local else '',
                 'check_out': co_local.strftime('%d/%m/%Y %H:%M') if co_local else 'Ongoing',
-                'worked_hours': '%.2f' % att.worked_hours,
+                'worked_hours': _format_hours(att.worked_hours),
             })
 
         total_pages = (total + per_page - 1) // per_page
