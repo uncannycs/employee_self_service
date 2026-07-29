@@ -6,11 +6,20 @@
         <field name="inherit_id" ref="hr_timesheet.hr_timesheet_line_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='unit_amount']" position="after">
+                <field name="holiday_id" column_invisible="True"/>
                 <field name="state" widget="badge" 
                        decoration-info="state == 'draft'" 
                        decoration-warning="state == 'confirm'" 
                        decoration-success="state == 'approved'" 
                        decoration-danger="state == 'refused'"/>
+                <button name="action_approve" string="Approve" type="object" icon="fa-check" 
+                        class="btn-success btn-sm ms-1" 
+                        invisible="state in ('approved', 'refused') or holiday_id != False" 
+                        groups="hr_timesheet.group_hr_timesheet_approver,base.group_erp_manager,ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin"/>
+                <button name="action_refuse" string="Refuse" type="object" icon="fa-times" 
+                        class="btn-danger btn-sm ms-1" 
+                        invisible="state in ('approved', 'refused') or holiday_id != False" 
+                        groups="hr_timesheet.group_hr_timesheet_approver,base.group_erp_manager,ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin"/>
             </xpath>
         </field>
     </record>
@@ -22,9 +31,10 @@
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="before">
                 <header>
-                    <button name="action_submit" string="Submit" type="object" class="oe_highlight" invisible="state != 'draft'"/>
-                    <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state != 'confirm'" groups="hr_timesheet.group_hr_timesheet_approver"/>
-                    <button name="action_refuse" string="Refuse" type="object" class="btn-secondary" invisible="state != 'confirm'" groups="hr_timesheet.group_hr_timesheet_approver"/>
+                    <button name="action_submit" string="Submit" type="object" class="oe_highlight" invisible="state != 'draft' or holiday_id != False"/>
+                    <button name="action_approve" string="Approve" type="object" class="oe_highlight" invisible="state in ('approved', 'refused') or holiday_id != False" groups="hr_timesheet.group_hr_timesheet_approver,base.group_erp_manager,ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin"/>
+                    <button name="action_refuse" string="Refuse" type="object" class="btn-secondary" invisible="state in ('approved', 'refused') or holiday_id != False" groups="hr_timesheet.group_hr_timesheet_approver,base.group_erp_manager,ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin"/>
+                    <button name="action_reset_draft" string="Set to Draft" type="object" class="btn-secondary" invisible="state == 'draft' or holiday_id != False" groups="base.group_erp_manager,hr_timesheet.group_timesheet_manager"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirm,approved"/>
                 </header>
             </xpath>
@@ -32,5 +42,25 @@
                 <field name="reject_reason" invisible="state != 'refused'"/>
             </xpath>
         </field>
+    </record>
+
+    <!-- Server Action: Approve Timesheets -->
+    <record id="action_timesheet_approve_mass" model="ir.actions.server">
+        <field name="name">Approve Selected Timesheets</field>
+        <field name="model_id" ref="hr_timesheet.model_account_analytic_line"/>
+        <field name="binding_model_id" ref="hr_timesheet.model_account_analytic_line"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">records.action_approve()</field>
+    </record>
+
+    <!-- Server Action: Refuse Timesheets -->
+    <record id="action_timesheet_refuse_mass" model="ir.actions.server">
+        <field name="name">Refuse Selected Timesheets</field>
+        <field name="model_id" ref="hr_timesheet.model_account_analytic_line"/>
+        <field name="binding_model_id" ref="hr_timesheet.model_account_analytic_line"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">records.action_refuse()</field>
     </record>
 </odoo>

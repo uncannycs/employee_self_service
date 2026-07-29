@@ -105,77 +105,223 @@
                     </div>
                 </div>
 
-                <!-- Leave History List -->
-                <div class="ess-hist-table-wrap mt-4">
-                    <h4 class="mb-3 px-3 pt-3" style="color: var(--ess-primary);"><i class="fa fa-history"/> Leave History</h4>
-                    <table class="ess-hist-table">
-                        <thead>
-                            <tr>
-                                <th>Date From</th>
-                                <th>Date To</th>
-                                <th>Leave Type</th>
-                                <th>Description</th>
-                                <th>Days</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <t t-if="leaves">
-                                <t t-foreach="leaves" t-as="leave">
+                <!-- Sub-Nav Tabs for Managers: MY LEAVES vs ALL EMPLOYEE LEAVES (Matches Timesheets view) -->
+                <t t-if="is_manager">
+                    <div class="ess-sub-nav bg-white shadow-sm border-bottom mb-4" style="padding: 0 20px; display: flex; overflow-x: auto; white-space: nowrap; border-radius: 8px;">
+                        <ul class="nav" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; width: 100%;">
+                            <li class="nav-item" role="presentation">
+                                <a t-attf-href="/my/leaves?scope=my" 
+                                   onclick="switchLeaveScopeTab('my'); return true;"
+                                   id="tab-leave-my"
+                                   t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope != 'all' else '' }}" 
+                                   t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope != 'all' else 'transparent') + '; opacity: ' + ('1' if scope != 'all' else '0.6') + ';'">
+                                    MY LEAVES
+                                </a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a t-attf-href="/my/leaves?scope=all" 
+                                   onclick="switchLeaveScopeTab('all'); return true;"
+                                   id="tab-leave-all"
+                                   t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope == 'all' else '' }}" 
+                                   t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope == 'all' else 'transparent') + '; opacity: ' + ('1' if scope == 'all' else '0.6') + ';'">
+                                    ALL EMPLOYEE LEAVES
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </t>
+
+                <!-- My Leave History Container -->
+                <div id="leave-history-my" t-att-style="'display: ' + ('none' if is_manager and scope == 'all' else 'block')">
+                    <div class="ess-hist-table-wrap">
+                        <table class="ess-hist-table">
+                            <thead>
+                                <tr>
+                                    <th>Date From</th>
+                                    <th>Date To</th>
+                                    <th>Leave Type</th>
+                                    <th>Description</th>
+                                    <th>Days</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-if="leaves">
+                                    <t t-foreach="leaves" t-as="leave">
+                                        <tr>
+                                            <td class="font-weight-bold"><t t-esc="leave.date_from.strftime('%d/%m/%Y') if leave.date_from else ''"/></td>
+                                            <td class="font-weight-bold"><t t-esc="leave.date_to.strftime('%d/%m/%Y') if leave.date_to else ''"/></td>
+                                            <td>
+                                                <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
+                                            </td>
+                                            <td><t t-esc="leave.name or ''"/></td>
+                                            <td>
+                                                <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
+                                                    <t t-esc="int(round((leave.number_of_hours or (leave.number_of_days * 8.0)) * 60))"/> min
+                                                </t>
+                                                <t t-elif="leave.request_unit_half">
+                                                    <t t-esc="leave.number_of_days"/>
+                                                    <small class="text-muted d-block">
+                                                        (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
+                                                    </small>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="leave.number_of_days"/>
+                                                </t>
+                                            </td>
+                                            <td>
+                                                <t t-if="leave.state == 'validate'">
+                                                    <span class="badge bg-success text-white">Approved</span>
+                                                </t>
+                                                <t t-elif="leave.state == 'refuse'">
+                                                    <span class="badge bg-danger text-white">Refused</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-warning text-white">Pending</span>
+                                                </t>
+                                            </td>
+                                            <td>
+                                                <t t-if="leave.state not in ['validate', 'refuse']">
+                                                    <a t-attf-href="/my/leaves/cancel/{{ leave.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to cancel this leave request?');">
+                                                        <i class="fa fa-times"/> Cancel
+                                                    </a>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                <t t-else="">
                                     <tr>
-                                        <td class="font-weight-bold"><t t-esc="leave.date_from.strftime('%d/%m/%Y') if leave.date_from else ''"/></td>
-                                        <td class="font-weight-bold"><t t-esc="leave.date_to.strftime('%d/%m/%Y') if leave.date_to else ''"/></td>
-                                        <td>
-                                            <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
-                                        </td>
-                                        <td><t t-esc="leave.name or ''"/></td>
-                                        <td>
-                                            <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
-                                                <t t-esc="int(round((leave.number_of_hours or (leave.number_of_days * 8.0)) * 60))"/> min
-                                            </t>
-                                            <t t-elif="leave.request_unit_half">
-                                                <t t-esc="leave.number_of_days"/>
-                                                <small class="text-muted d-block">
-                                                    (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
-                                                </small>
-                                            </t>
-                                            <t t-else="">
-                                                <t t-esc="leave.number_of_days"/>
-                                            </t>
-                                        </td>
-                                        <td>
-                                            <t t-if="leave.state == 'validate'">
-                                                <span class="badge bg-success text-white">Approved</span>
-                                            </t>
-                                            <t t-elif="leave.state == 'refuse'">
-                                                <span class="badge bg-danger text-white">Refused</span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="badge bg-warning text-white">Pending</span>
-                                            </t>
-                                        </td>
-                                        <td>
-                                            <t t-if="leave.state not in ['validate', 'refuse']">
-                                                <a t-attf-href="/my/leaves/cancel/{{ leave.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to cancel this leave request?');">
-                                                    <i class="fa fa-times"/> Cancel
-                                                </a>
-                                            </t>
+                                        <td colspan="7" class="ess-empty-row">
+                                            <i class="fa fa-inbox fa-2x"/>
+                                            <div>No leave requests found.</div>
                                         </td>
                                     </tr>
                                 </t>
-                            </t>
-                            <t t-else="">
-                                <tr>
-                                    <td colspan="7" class="ess-empty-row">
-                                        <i class="fa fa-inbox fa-2x"/>
-                                        <div>No leave requests found.</div>
-                                    </td>
-                                </tr>
-                            </t>
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- All Employee Leaves Container for Managers -->
+                <t t-if="is_manager">
+                    <div id="leave-history-all" t-att-style="'display: ' + ('block' if scope == 'all' else 'none')">
+                        <div class="ess-hist-table-wrap">
+                            <table class="ess-hist-table">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Date From</th>
+                                        <th>Date To</th>
+                                        <th>Leave Type</th>
+                                        <th>Description</th>
+                                        <th>Days</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-if="team_leaves">
+                                        <t t-foreach="team_leaves" t-as="tleave">
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img t-attf-src="/web/image/hr.employee/{{ tleave.employee_id.id }}/avatar_128" 
+                                                             style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
+                                                        <span class="font-weight-bold text-dark"><t t-esc="tleave.employee_id.name"/></span>
+                                                    </div>
+                                                </td>
+                                                <td class="font-weight-bold"><t t-esc="tleave.date_from.strftime('%d/%m/%Y') if tleave.date_from else ''"/></td>
+                                                <td class="font-weight-bold"><t t-esc="tleave.date_to.strftime('%d/%m/%Y') if tleave.date_to else ''"/></td>
+                                                <td>
+                                                    <span class="badge badge-light text-primary"><t t-esc="tleave.holiday_status_id.name"/></span>
+                                                </td>
+                                                <td><t t-esc="tleave.name or ''"/></td>
+                                                <td>
+                                                    <t t-if="tleave.request_unit_hours or tleave.holiday_status_id.request_unit == 'hour'">
+                                                        <t t-esc="int(round((tleave.number_of_hours or (tleave.number_of_days * 8.0)) * 60))"/> min
+                                                    </t>
+                                                    <t t-elif="tleave.request_unit_half">
+                                                        <t t-esc="tleave.number_of_days"/>
+                                                        <small class="text-muted d-block">
+                                                            (<t t-esc="'Morning' if tleave.request_date_from_period == 'am' else 'Afternoon'"/>)
+                                                        </small>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="tleave.number_of_days"/>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="tleave.state == 'validate'">
+                                                        <span class="badge bg-success text-white">Approved</span>
+                                                    </t>
+                                                    <t t-elif="tleave.state == 'refuse'">
+                                                        <span class="badge bg-danger text-white">Refused</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="badge bg-warning text-white">Pending</span>
+                                                    </t>
+                                                </td>
+                                                <td class="text-center">
+                                                    <t t-if="tleave.state in ['confirm', 'validate', 'validate1']">
+                                                        <a t-attf-href="/my/approvals/refuse/{{ tleave.id }}?redirect=/my/leaves" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse/reject this leave request?');" title="Refuse">
+                                                            <i class="fa fa-times"/> Refuse / Reject
+                                                        </a>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <tr>
+                                            <td colspan="8" class="ess-empty-row">
+                                                <i class="fa fa-users fa-2x"/>
+                                                <div>No employee leave records found.</div>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <script type="text/javascript">
+                        function switchLeaveScopeTab(scope) {
+                            var myWrap = document.getElementById('leave-history-my');
+                            var allWrap = document.getElementById('leave-history-all');
+                            var tabMy = document.getElementById('tab-leave-my');
+                            var tabAll = document.getElementById('tab-leave-all');
+                            
+                            if (scope === 'my') {
+                                if(myWrap) myWrap.style.display = 'block';
+                                if(allWrap) allWrap.style.display = 'none';
+                                if(tabMy) {
+                                    tabMy.style.borderBottom = '3px solid #4c1d95';
+                                    tabMy.style.opacity = '1';
+                                    tabMy.classList.add('active');
+                                }
+                                if(tabAll) {
+                                    tabAll.style.borderBottom = '3px solid transparent';
+                                    tabAll.style.opacity = '0.6';
+                                    tabAll.classList.remove('active');
+                                }
+                            } else {
+                                if(myWrap) myWrap.style.display = 'none';
+                                if(allWrap) allWrap.style.display = 'block';
+                                if(tabMy) {
+                                    tabMy.style.borderBottom = '3px solid transparent';
+                                    tabMy.style.opacity = '0.6';
+                                    tabMy.classList.remove('active');
+                                }
+                                if(tabAll) {
+                                    tabAll.style.borderBottom = '3px solid #4c1d95';
+                                    tabAll.style.opacity = '1';
+                                    tabAll.classList.add('active');
+                                }
+                            }
+                        }
+                    </script>
+                </t>
             </div>
 
             <!-- New Leave Modal -->

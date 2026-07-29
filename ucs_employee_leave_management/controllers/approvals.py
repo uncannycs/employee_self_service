@@ -8,14 +8,17 @@ class LeavePortalApprovals(PortalApprovals):
     
     def _prepare_approvals_values(self):
         values = super()._prepare_approvals_values()
-        
         user = request.env.user
-        employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
-        if not employee:
-            return values
+
+        is_admin_or_manager = (
+            user.has_group('base.group_erp_manager') or
+            user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or
+            user.has_group('hr_holidays.group_hr_holidays_user') or
+            user.has_group('hr_holidays.group_hr_holidays_responsible')
+        )
 
         Leave = request.env['hr.leave'].sudo()
-        if user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin'):
+        if is_admin_or_manager:
             domain = [('state', '=', 'confirm')]
         else:
             domain = [('state', '=', 'confirm'), ('employee_id.leave_manager_id', '=', user.id)]
@@ -31,13 +34,18 @@ class LeavePortalApprovals(PortalApprovals):
     @http.route('/my/approvals/approve/<int:leave_id>', type='http', auth="user", website=True)
     def portal_approve_leave(self, leave_id, **kw):
         user = request.env.user
-        employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
-        
         Leave = request.env['hr.leave'].sudo()
         leave = Leave.browse(leave_id)
         
+        is_admin_or_manager = (
+            user.has_group('base.group_erp_manager') or
+            user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or
+            user.has_group('hr_holidays.group_hr_holidays_user') or
+            user.has_group('hr_holidays.group_hr_holidays_responsible')
+        )
+
         if leave.exists() and leave.state == 'confirm':
-            if user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or leave.employee_id.leave_manager_id.id == user.id:
+            if is_admin_or_manager or leave.employee_id.leave_manager_id.id == user.id:
                 try:
                     leave.with_user(1).action_approve()
                     return request.redirect('/my/approvals?tab=leave')
@@ -52,20 +60,45 @@ class LeavePortalApprovals(PortalApprovals):
     @http.route('/my/approvals/refuse/<int:leave_id>', type='http', auth="user", website=True)
     def portal_refuse_leave(self, leave_id, **kw):
         user = request.env.user
-        employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
-        
         Leave = request.env['hr.leave'].sudo()
         leave = Leave.browse(leave_id)
+        redirect_url = kw.get('redirect', '/my/approvals?tab=leave')
         
-        if leave.exists() and leave.state == 'confirm':
-            if user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or leave.employee_id.leave_manager_id.id == user.id:
+        is_admin_or_manager = (
+            user.has_group('base.group_erp_manager') or
+            user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or
+            user.has_group('hr_holidays.group_hr_holidays_user') or
+            user.has_group('hr_holidays.group_hr_holidays_responsible')
+        )
+
+        def get_all_subordinates(emp):
+            subs = emp.subordinate_ids
+            all_subs = subs
+            for sub in subs:
+                all_subs |= get_all_subordinates(sub)
+            return all_subs
+
+        manager_emp = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
+        subordinates = get_all_subordinates(manager_emp) if manager_emp else request.env['hr.employee'].sudo().browse()
+
+        is_authorized = (
+            is_admin_or_manager or
+            leave.employee_id.leave_manager_id.id == user.id or
+            leave.employee_id.parent_id.user_id.id == user.id or
+            leave.employee_id.id in subordinates.ids
+        )
+
+        if leave.exists() and leave.state in ['confirm', 'validate', 'validate1']:
+            if is_authorized:
                 try:
-                    leave.with_user(1).action_refuse()
-                    return request.redirect('/my/approvals?tab=leave')
+                    leave.sudo().action_refuse()
+                    return request.redirect(redirect_url)
                 except Exception as e:
                     error_msg = str(e)
-                    return request.redirect('/my/approvals?tab=leave&error=' + urllib.parse.quote(error_msg))
+                    sep = '&' if '?' in redirect_url else '?'
+                    return request.redirect(redirect_url + sep + 'error=' + urllib.parse.quote(error_msg))
             else:
-                return request.redirect('/my/approvals?tab=leave&error=' + urllib.parse.quote("You are not authorized to refuse this leave."))
+                sep = '&' if '?' in redirect_url else '?'
+                return request.redirect(redirect_url + sep + 'error=' + urllib.parse.quote("You are not authorized to refuse this leave."))
                 
-        return request.redirect('/my/approvals?tab=leave')
+        return request.redirect(redirect_url)

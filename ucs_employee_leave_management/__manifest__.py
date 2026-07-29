@@ -11,6 +11,7 @@
     'depends': ['ucs_portal_self_service', 'hr_holidays'],
     'data': [
         'security/security.xml',
+        'data/ir_cron_data.xml',
         'views/portal_templates.xml',
         'views/leaves_templates.xml',
         'views/approvals_templates.xml',

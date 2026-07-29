@@ -15,22 +15,97 @@ class AccountAnalyticLine(models.Model):
     reject_reason = fields.Text(string='Reject Reason', copy=False)
 
     def action_submit(self):
-        for line in self:
+        submittable_lines = self.filtered(lambda l: not getattr(l, 'holiday_id', False))
+        for line in submittable_lines:
             if line.state != 'draft':
                 raise UserError(_("Only draft timesheets can be submitted."))
             line.write({'state': 'confirm'})
+        
+        if submittable_lines:
+            submittable_lines._send_timesheet_submit_email_to_manager()
+
+    def _send_timesheet_submit_email_to_manager(self):
+        from itertools import groupby as py_groupby
+        for employee, lines in py_groupby(self.sorted(key=lambda l: l.employee_id.id or 0), key=lambda l: l.employee_id):
+            line_list = list(lines)
+            if not employee:
+                continue
+            
+            manager = employee.leave_manager_id or employee.parent_id.user_id
+            manager_email = manager.email or (employee.parent_id.work_email if employee.parent_id else False)
+            if not manager_email:
+                continue
+
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+            approval_url = f"{base_url}/my/approvals?tab=timesheet"
+
+            rows_html = ""
+            for line in line_list:
+                rows_html += f"""
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{line.date}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{line.project_id.name or ''}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{line.task_id.name or '-'}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{line.name or ''}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">{line.unit_amount:.2f} hrs</td>
+                </tr>
+                """
+
+            subject = f"[Timesheet Approval Required] {employee.name} submitted timesheets for approval"
+            body_html = f"""
+            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
+                <h3 style="color: #6C5CE7;">Timesheet Approval Request</h3>
+                <p>Dear <strong>{manager.name or 'Manager'}</strong>,</p>
+                <p><strong>{employee.name}</strong> has submitted the following timesheet(s) for your approval:</p>
+                <table style="border-collapse: collapse; width: 100%; margin: 15px 0;">
+                    <thead>
+                        <tr style="background-color: #6C5CE7; color: white;">
+                            <th style="padding: 8px; border: 1px solid #ddd;">Date</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Project</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Task</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Description</th>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Time Spent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows_html}
+                    </tbody>
+                </table>
+                <p style="margin-top: 20px;">
+                    <a href="{approval_url}" style="background-color: #6C5CE7; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Review & Approve Timesheets in Portal
+                    </a>
+                </p>
+                <br/>
+                <p style="font-size: 12px; color: #777;">This is an automated notification from Employee Self Service Portal.</p>
+            </div>
+            """
+
+            try:
+                mail_values = {
+                    'subject': subject,
+                    'email_from': self.env.company.email or self.env.user.email_formatted or 'noreply@company.com',
+                    'email_to': manager_email,
+                    'body_html': body_html,
+                    'state': 'outgoing',
+                }
+                mail = self.env['mail.mail'].sudo().create(mail_values)
+                mail.send()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error("Failed to send Timesheet Submission Email to Manager: %s", str(e))
 
     def action_approve(self):
-        for line in self:
-            if line.state != 'confirm':
-                raise UserError(_("Only submitted timesheets can be approved."))
+        for line in self.filtered(lambda l: not getattr(l, 'holiday_id', False)):
             line.write({'state': 'approved', 'reject_reason': False})
 
     def action_refuse(self, reason=''):
-        for line in self:
-            if line.state != 'confirm':
-                raise UserError(_("Only submitted timesheets can be refused."))
+        for line in self.filtered(lambda l: not getattr(l, 'holiday_id', False)):
             line.write({'state': 'refused', 'reject_reason': reason})
+
+    def action_reset_draft(self):
+        for line in self.filtered(lambda l: not getattr(l, 'holiday_id', False)):
+            line.write({'state': 'draft', 'reject_reason': False})
 
     # Prevent editing/deleting if not in draft
     def write(self, vals):

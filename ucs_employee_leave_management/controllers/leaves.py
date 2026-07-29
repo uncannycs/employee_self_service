@@ -83,11 +83,30 @@ class PortalCustomLeaves(CustomerPortal):
         all_valid_ids = list(set(valid_leave_type_ids + no_allocation_types.ids))
         leave_types = request.env['hr.leave.type'].sudo().browse(all_valid_ids)
         
+        # Subordinates & Team Leaves logic for Managers
+        def get_all_subordinates(emp):
+            subs = emp.subordinate_ids
+            all_subs = subs
+            for sub in subs:
+                all_subs |= get_all_subordinates(sub)
+            return all_subs
+
+        subordinates = get_all_subordinates(employee)
+        is_manager = bool(subordinates) or user.has_group('base.group_erp_manager') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_manager')
+
+        team_leaves = request.env['hr.leave'].sudo().browse()
+        if is_manager:
+            team_employees = (subordinates | employee) if subordinates else request.env['hr.employee'].sudo().search([('active', '=', True)])
+            team_leaves = Leave.search([('employee_id', 'in', team_employees.ids)], order="date_from desc", limit=200)
+
         values = {
             'employee': employee,
             'leaves': leaves,
             'leave_types': leave_types,
             'leave_balances': leave_balances,
+            'is_manager': is_manager,
+            'team_leaves': team_leaves,
+            'scope': kw.get('scope', 'my'),
             'page_name': 'leave',
             'pager': pager,
             'default_url': '/my/leaves',
@@ -107,12 +126,33 @@ class PortalCustomLeaves(CustomerPortal):
         start_dt = datetime.fromisoformat(start.replace('Z', '+00:00')).replace(tzinfo=None)
         end_dt = datetime.fromisoformat(end.replace('Z', '+00:00')).replace(tzinfo=None)
 
-        leaves = request.env['hr.leave'].sudo().search([
-            ('employee_id', '=', employee.id),
-            ('date_from', '<', end_dt),
-            ('date_to', '>=', start_dt),
-            ('state', '!=', 'refuse')
-        ])
+        def get_all_subordinates(emp):
+            subs = emp.subordinate_ids
+            all_subs = subs
+            for sub in subs:
+                all_subs |= get_all_subordinates(sub)
+            return all_subs
+
+        subordinates = get_all_subordinates(employee)
+        is_manager = bool(subordinates) or user.has_group('base.group_erp_manager') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_manager')
+
+        if is_manager:
+            team_employees = (subordinates | employee) if subordinates else request.env['hr.employee'].sudo().search([('active', '=', True)])
+            domain = [
+                ('employee_id', 'in', team_employees.ids),
+                ('date_from', '<', end_dt),
+                ('date_to', '>=', start_dt),
+                ('state', '!=', 'refuse')
+            ]
+        else:
+            domain = [
+                ('employee_id', '=', employee.id),
+                ('date_from', '<', end_dt),
+                ('date_to', '>=', start_dt),
+                ('state', '!=', 'refuse')
+            ]
+
+        leaves = request.env['hr.leave'].sudo().search(domain)
 
         events = []
         for leave in leaves:
@@ -120,21 +160,23 @@ class PortalCustomLeaves(CustomerPortal):
             if leave.state in ['draft', 'confirm', 'validate1']:
                 color = '#f39c12' # orange for pending
                 
+            title = f"{leave.employee_id.name} - {leave.holiday_status_id.name}" if (is_manager and leave.employee_id != employee) else f"{leave.holiday_status_id.name} ({leave.state})"
+            
             events.append({
                 'id': leave.id,
-                'title': f"{leave.holiday_status_id.name} ({leave.state})",
+                'title': title,
                 'start': leave.date_from.isoformat() + 'Z',
                 'end': leave.date_to.isoformat() + 'Z',
                 'color': color,
-                'allDay': True, # Most leaves are represented as all day or specific times
+                'allDay': True,
                 'description': leave.name or '',
             })
             
-        # Optional: Add public holidays if required
+        # Public holidays
         holidays = request.env['resource.calendar.leaves'].sudo().search([
             ('date_from', '<', end_dt),
             ('date_to', '>=', start_dt),
-            ('resource_id', '=', False) # Global leaves
+            ('resource_id', '=', False)
         ])
         for holiday in holidays:
             events.append({
@@ -142,7 +184,7 @@ class PortalCustomLeaves(CustomerPortal):
                 'title': holiday.name,
                 'start': holiday.date_from.isoformat() + 'Z',
                 'end': holiday.date_to.isoformat() + 'Z',
-                'color': '#28a745', # green for public holidays
+                'color': '#28a745',
                 'allDay': True,
             })
 
@@ -307,6 +349,11 @@ class PortalCustomLeaves(CustomerPortal):
         ])
         
         if leave and leave.state in ['draft', 'confirm', 'validate1']:
-            leave.unlink()
+            try:
+                leave.unlink()
+            except Exception as e:
+                import urllib.parse
+                error_msg = str(e).replace('\n', ' ')
+                return request.redirect('/my/leaves?error=' + urllib.parse.quote(error_msg))
             
         return request.redirect('/my/leaves')

@@ -14,8 +14,15 @@ class TimesheetPortalApprovals(PortalApprovals):
         if not employee:
             return values
 
+        is_admin = (
+            user.has_group('base.group_erp_manager') or
+            user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin') or
+            user.has_group('hr_timesheet.group_timesheet_manager') or
+            user.has_group('hr_timesheet.group_hr_timesheet_approver')
+        )
+
         Line = request.env['account.analytic.line'].sudo()
-        if user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin'):
+        if is_admin:
             domain = [('state', '=', 'confirm'), ('project_id', '!=', False)]
         elif user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_manager'):
             domain = [
@@ -80,7 +87,12 @@ class TimesheetPortalApprovals(PortalApprovals):
         line = Line.browse(line_id)
         
         if line.exists() and line.state == 'confirm':
-            is_admin = user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin')
+            is_admin = (
+                user.has_group('base.group_erp_manager') or
+                user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin') or
+                user.has_group('hr_timesheet.group_timesheet_manager') or
+                user.has_group('hr_timesheet.group_hr_timesheet_approver')
+            )
             is_manager = line.employee_id.parent_id.user_id.id == user.id
             
             if is_admin or is_manager:
@@ -98,17 +110,22 @@ class TimesheetPortalApprovals(PortalApprovals):
     @http.route('/my/approvals/timesheet/refuse/<int:line_id>', type='http', auth="user", website=True)
     def portal_refuse_timesheet(self, line_id, **kw):
         user = request.env.user
-        reason = kw.get('reason', '')
         
         Line = request.env['account.analytic.line'].sudo()
         line = Line.browse(line_id)
         
         if line.exists() and line.state == 'confirm':
-            is_admin = user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin')
+            is_admin = (
+                user.has_group('base.group_erp_manager') or
+                user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin') or
+                user.has_group('hr_timesheet.group_timesheet_manager') or
+                user.has_group('hr_timesheet.group_hr_timesheet_approver')
+            )
             is_manager = line.employee_id.parent_id.user_id.id == user.id
             
             if is_admin or is_manager:
                 try:
+                    reason = kw.get('reject_reason', '')
                     line.with_user(1).action_refuse(reason=reason)
                     return request.redirect('/my/approvals?tab=timesheet')
                 except Exception as e:

@@ -62,14 +62,21 @@
                                                 </t>
                                             </td>
                                             <td>
-                                                <span class="badge bg-warning text-white">To Approve</span>
+                                                <t t-if="leave.state in ['validate', 'validate1']">
+                                                    <span class="badge bg-success text-white">Approved</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-warning text-white">To Approve</span>
+                                                </t>
                                             </td>
                                             <td class="text-center">
-                                                <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
-                                                    <i class="fa fa-check"/> Approve
-                                                </a>
-                                                <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse this leave request?');" title="Refuse">
-                                                    <i class="fa fa-times"/> Refuse
+                                                <t t-if="leave.state == 'confirm'">
+                                                    <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
+                                                        <i class="fa fa-check"/> Approve
+                                                    </a>
+                                                </t>
+                                                <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse/reject this leave request?');" title="Refuse">
+                                                    <i class="fa fa-times"/> Refuse / Reject
                                                 </a>
                                             </td>
                                         </tr>
