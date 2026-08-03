@@ -591,8 +591,16 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
         if not is_employee:
             return request.redirect('/my/timesheets')
             
-        project_id = int(post.get('project_id', 0))
-        task_id = int(post.get('task_id', 0)) or False
+        def _safe_int(val, default=0):
+            if not val:
+                return default
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return default
+
+        project_id = _safe_int(post.get('project_id'), 0)
+        task_id = _safe_int(post.get('task_id'), False)
         date = post.get('date')
         unit_amount_str = post.get('unit_amount_str', '')
         unit_amount = 0.0
@@ -607,8 +615,8 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
             except ValueError:
                 unit_amount = 0.0
                 
-        name = post.get('name', '')
-        if project_id and date and unit_amount > 0:
+        name = post.get('name', '').strip()
+        if project_id and task_id and name and date and unit_amount > 0:
             user = request.env.user
             employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
             

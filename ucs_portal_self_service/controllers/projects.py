@@ -637,7 +637,10 @@ class PortalCustomProjects(ProjectCustomerPortal):
         if not request.env.user.has_group('ucs_portal_self_service.group_portal_task_create'):
             return request.redirect('/my/projects')
             
-        project_id = int(post.get('project_id', 0))
+        try:
+            project_id = int(post.get('project_id', 0)) if post.get('project_id') else 0
+        except (ValueError, TypeError):
+            project_id = 0
         name = post.get('name')
         description = post.get('description', '')
         date_deadline = post.get('date_deadline')
