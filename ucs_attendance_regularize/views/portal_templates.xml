@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="portal_attendance_history_regularize" inherit_id="ucs_portal_self_service.portal_attendance_history" name="Attendance History Regularize">
+        <!-- Add empty header for the action column -->
+        <xpath expr="//table[hasclass('ess-hist-table')]/thead/tr/th[last()]" position="after">
+            <th class="text-right"></th>
+        </xpath>
+
+        <!-- Add the Regularize button and modal to each attendance row -->
+        <xpath expr="//span[hasclass('ess-hrs-val')]/.." position="after">
+            <td class="text-right">
+                <button type="button" class="btn btn-sm shadow-sm" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 20px; font-size: 0.75rem; font-weight: 600; padding: 4px 12px; transition: all 0.2s;" onmouseover="this.style.background='rgba(139, 92, 246, 0.2)'" onmouseout="this.style.background='rgba(139, 92, 246, 0.1)'" data-bs-toggle="modal" t-attf-data-bs-target="#regularizeModal_{{ att_index }}">
+                    Regularize
+                </button>
+                
+                <!-- Regularize Modal -->
+                <div class="modal fade text-left" t-attf-id="regularizeModal_{{ att_index }}" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header bg-light">
+                                <h5 class="modal-title font-weight-bold"><i class="fa fa-pencil-square-o mr-2"/>Regularize Attendance</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                    <div class="d-flex justify-content-around align-items-center mb-3 p-2 rounded shadow-sm" style="background-color: #e0f2fe; border: 1px solid #bae6fd;">
+                                        <div class="text-center px-2">
+                                            <div class="text-muted mb-1" style="font-size: 0.75rem;"><i class="fa fa-sign-in text-success mr-1"/> Check In</div>
+                                            <div class="font-weight-bold text-dark" style="font-size: 0.85rem;"><t t-esc="att['check_in'].split(' ', 1)[1] if att['check_in'] else '- -'"/></div>
+                                        </div>
+                                        <div class="text-center px-3" style="border-left: 1px solid #bae6fd; border-right: 1px solid #bae6fd;">
+                                            <div class="text-muted mb-1" style="font-size: 0.75rem;"><i class="fa fa-clock-o text-primary mr-1"/> Total Time</div>
+                                            <div class="font-weight-bold text-primary" style="font-size: 0.9rem;"><t t-esc="att['worked_hours']"/></div>
+                                        </div>
+                                        <div class="text-center px-2">
+                                            <div class="text-muted mb-1" style="font-size: 0.75rem;"><i class="fa fa-sign-out text-danger mr-1"/> Check Out</div>
+                                            <div class="font-weight-bold text-dark" style="font-size: 0.85rem;">
+                                                <t t-if="att['check_out'] == 'Ongoing'">
+                                                    <span class="text-warning">Ongoing</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-esc="att['check_out'].split(' ', 1)[1] if att['check_out'] else '- -'"/>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <t t-set="employee" t-value="request.env['hr.employee'].sudo().search([('user_id', '=', request.env.user.id)], limit=1)"/>
+                                <t t-set="req_left" t-value="(employee.regularize_request_assign - employee.regularize_req_used) if employee else 0"/>
+                                
+                                <t t-if="req_left > 0">
+                                    <div class="alert alert-info py-2 mb-3" style="font-size: 0.85rem;">
+                                        <i class="fa fa-info-circle mr-2"/> You have <strong><t t-esc="req_left"/></strong> regularization request(s) left this month.
+                                    </div>
+                                    <form action="/my/attendance/regularize_request" method="post">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <!-- Backend references -->
+                                        <input type="hidden" name="attendance_id" t-att-value="att['id']"/>
+                                        <input type="hidden" name="check_in_old" t-att-value="att['check_in']"/>
+                                        <input type="hidden" name="check_out_old" t-att-value="att['check_out']"/>
+                                        
+                                        <div t-attf-id="checkout_warning_{{ att_index }}" class="alert alert-warning py-2 mb-3" style="display: none; font-size: 0.85rem;">
+                                            <i class="fa fa-exclamation-triangle mr-2"/><strong>Note:</strong> Please complete your Check-Out before you can regularize it.
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label font-weight-bold" style="font-size: 0.9rem;">Regularize Type <span class="text-danger">*</span></label>
+                                            <select class="form-select form-control" name="regularize_type" required="required" 
+                                                    t-att-data-is-ongoing="att['check_out'] == 'Ongoing'"
+                                                    t-attf-onchange="
+                                                        var isOngoing = this.getAttribute('data-is-ongoing') === 'True';
+                                                        document.getElementById('check_in_div_{{ att_index }}').style.display = (this.value === 'check_in') ? 'block' : 'none';
+                                                        document.getElementById('check_out_div_{{ att_index }}').style.display = (this.value === 'check_out' &amp;&amp; !isOngoing) ? 'block' : 'none';
+                                                        document.getElementById('checkout_warning_{{ att_index }}').style.display = (this.value === 'check_out' &amp;&amp; isOngoing) ? 'block' : 'none';
+                                                        document.getElementById('submit_btn_{{ att_index }}').disabled = (this.value === 'check_out' &amp;&amp; isOngoing);
+                                                    ">
+                                                <option value="">-- Select --</option>
+                                                <option value="check_in">Check-In</option>
+                                                <option value="check_out">Check-Out</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3" t-attf-id="check_in_div_{{ att_index }}" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <div style="flex: 1;">
+                                                    <label class="form-label font-weight-bold text-muted mb-1" style="font-size: 0.8rem;">Current Check-In Time</label>
+                                                    <div class="form-control bg-light text-muted" style="text-align: center;"><t t-esc="att['check_in'].split(' ', 1)[1] if att['check_in'] else ''"/></div>
+                                                </div>
+                                                <div class="mx-3 pt-4"><i class="fa fa-long-arrow-right text-muted fa-lg"/></div>
+                                                <div style="flex: 1;">
+                                                    <label class="form-label font-weight-bold text-primary mb-1" style="font-size: 0.8rem;">New Check-In Time</label>
+                                                    <input type="time" class="form-control border-primary" name="check_in_new"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3" t-attf-id="check_out_div_{{ att_index }}" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <div style="flex: 1;">
+                                                    <label class="form-label font-weight-bold text-muted mb-1" style="font-size: 0.8rem;">Current Check-Out Time</label>
+                                                    <div class="form-control bg-light text-muted" style="text-align: center;"><t t-esc="att['check_out'].split(' ', 1)[1] if att['check_out'] and att['check_out'] != 'Ongoing' else att['check_out']"/></div>
+                                                </div>
+                                                <div class="mx-3 pt-4"><i class="fa fa-long-arrow-right text-muted fa-lg"/></div>
+                                                <div style="flex: 1;">
+                                                    <label class="form-label font-weight-bold text-primary mb-1" style="font-size: 0.8rem;">New Check-Out Time</label>
+                                                    <input type="time" class="form-control border-primary" name="check_out_new"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label font-weight-bold" style="font-size: 0.9rem;">Reason for Regularization <span class="text-danger">*</span></label>
+                                            <textarea class="form-control" name="reason" rows="2" required="required" placeholder="Provide a valid reason for regularization..."></textarea>
+                                        </div>
+                                        
+                                        <div class="text-right">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" t-attf-id="submit_btn_{{ att_index }}" class="btn btn-primary" style="background-color: #8b5cf6; border-color: #8b5cf6;">Submit Request</button>
+                                        </div>
+                                    </form>
+                                </t>
+                                <t t-else="">
+                                    <div class="alert alert-danger py-3 mb-3 text-center" style="font-size: 0.9rem;">
+                                        <i class="fa fa-exclamation-triangle fa-2x mb-2 d-block"/>
+                                        <strong>Your request is no longer available for this month.</strong>
+                                    </div>
+                                    <div class="text-right">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </xpath>
+
+        <!-- Update colspan for the empty state row -->
+        <xpath expr="//td[hasclass('ess-empty-row')]" position="attributes">
+            <attribute name="colspan">4</attribute>
+        </xpath>
+    </template>
+
+</odoo>

@@ -1,0 +1,29 @@
+# -*- coding: utf-8 -*-
+{
+    'name': 'Attendance Regularize Portal',
+    'version': '1.0',
+    'summary': 'Add regularize button and popup to attendance portal',
+    'description': 'Adds functionality to regularize attendance from the employee portal.',
+    'category': 'Human Resources',
+    'author': 'Uncanny Consulting Services',
+    'website': 'https://www.uncannycs.com',
+    'depends': [
+        'ucs_portal_self_service',
+        'hr_attendance',
+        'mail',
+    ],
+    'data': [
+        'security/security.xml',
+        'security/ir.model.access.csv',
+        'data/ir_sequence_data.xml',
+        'data/ir_cron_data.xml',
+        'views/attendance_regularize_views.xml',
+        'views/hr_employee_views.xml',
+        'views/res_config_settings_views.xml',
+        'views/portal_templates.xml',
+        'views/approvals_templates.xml',
+    ],
+    'installable': True,
+    'application': False,
+    'license': 'LGPL-3',
+}

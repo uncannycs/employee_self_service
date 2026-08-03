@@ -12,13 +12,13 @@ def _get_employee(user):
 
 
 def _format_hours(hours):
-    """Convert float hours to HH:MM format."""
+    """Convert float hours to HHh MMm format."""
     if not hours:
-        return '00:00'
+        return '00h 00m'
     total_seconds = int(round(hours * 3600))
     hrs = total_seconds // 3600
     mins = (total_seconds % 3600) // 60
-    return f"{hrs:02d}:{mins:02d}"
+    return f"{hrs:02d}h {mins:02d}m"
 
 
 def _to_user_time(dt_utc, user_tz):
@@ -321,8 +321,9 @@ class CustomCustomerPortal(CustomerPortal):
             ci_local = pytz.utc.localize(att.check_in).astimezone(tz) if att.check_in else None
             co_local = pytz.utc.localize(att.check_out).astimezone(tz) if att.check_out else None
             attendances.append({
-                'check_in': ci_local.strftime('%d/%m/%Y %H:%M') if ci_local else '',
-                'check_out': co_local.strftime('%d/%m/%Y %H:%M') if co_local else 'Ongoing',
+                'id': att.id,
+                'check_in': ci_local.strftime('%d/%m/%Y %I:%M %p') if ci_local else '',
+                'check_out': co_local.strftime('%d/%m/%Y %I:%M %p') if co_local else 'Ongoing',
                 'worked_hours': _format_hours(att.worked_hours),
             })
 
