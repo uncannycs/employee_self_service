@@ -105,19 +105,19 @@
                     </div>
                 </div>
 
-                <!-- Sub-Nav Tabs for Managers: MY LEAVES vs ALL EMPLOYEE LEAVES (Matches Timesheets view) -->
-                <t t-if="is_manager">
-                    <div class="ess-sub-nav bg-white shadow-sm border-bottom mb-4" style="padding: 0 20px; display: flex; overflow-x: auto; white-space: nowrap; border-radius: 8px;">
-                        <ul class="nav" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; width: 100%;">
-                            <li class="nav-item" role="presentation">
-                                <a t-attf-href="/my/leaves?scope=my" 
-                                   onclick="switchLeaveScopeTab('my'); return true;"
-                                   id="tab-leave-my"
-                                   t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope != 'all' else '' }}" 
-                                   t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope != 'all' else 'transparent') + '; opacity: ' + ('1' if scope != 'all' else '0.6') + ';'">
-                                    MY LEAVES
-                                </a>
-                            </li>
+                <!-- Sub-Nav Tabs: MY LEAVES (visible to all) vs ALL EMPLOYEE LEAVES (only for managers) -->
+                <div class="ess-sub-nav bg-white shadow-sm border-bottom mb-4" style="padding: 0 20px; display: flex; overflow-x: auto; white-space: nowrap; border-radius: 8px;">
+                    <ul class="nav" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; width: 100%;">
+                        <li class="nav-item" role="presentation">
+                            <a t-attf-href="/my/leaves?scope=my" 
+                               onclick="switchLeaveScopeTab('my'); return true;"
+                               id="tab-leave-my"
+                               t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope != 'all' else '' }}" 
+                               t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope != 'all' else 'transparent') + '; opacity: ' + ('1' if scope != 'all' else '0.6') + ';'">
+                                MY LEAVES
+                            </a>
+                        </li>
+                        <t t-if="is_manager">
                             <li class="nav-item" role="presentation">
                                 <a t-attf-href="/my/leaves?scope=all" 
                                    onclick="switchLeaveScopeTab('all'); return true;"
@@ -127,9 +127,9 @@
                                     ALL EMPLOYEE LEAVES
                                 </a>
                             </li>
-                        </ul>
-                    </div>
-                </t>
+                        </t>
+                    </ul>
+                </div>
 
                 <!-- My Leave History Container -->
                 <div id="leave-history-my" t-att-style="'display: ' + ('none' if is_manager and scope == 'all' else 'block')">

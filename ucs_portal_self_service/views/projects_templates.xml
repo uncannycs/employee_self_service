@@ -291,18 +291,18 @@
             <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_task_create')">
                 <div class="modal fade" id="createTaskModal" tabindex="-1" role="dialog" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered" role="document">
-                        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-content border-0 shadow" style="background-color: #ffffff; border-radius: 12px; overflow: visible;">
                             <form action="/my/tasks/create" method="post">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <input type="hidden" name="project_id" t-att-value="project.id"/>
                                 
-                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center" style="border-top-left-radius: 12px; border-top-right-radius: 12px; background-color: #ffffff;">
                                     <h5 class="modal-title font-weight-bold text-dark">Create New Task</h5>
                                     <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
                                         <span aria-hidden="true">&amp;times;</span>
                                     </button>
                                 </div>
-                                <div class="modal-body px-4 pt-3">
+                                <div class="modal-body px-4 pt-3 bg-white" style="overflow: visible; background-color: #ffffff;">
                                     <div class="form-group mb-3">
                                         <label class="text-muted small font-weight-bold">Task Title</label>
                                         <input type="text" class="form-control" name="name" required="1" placeholder="e.g. Design Homepage" style="border-radius: 6px;"/>
@@ -331,7 +331,7 @@
                                             <input type="text" class="form-control" name="client_allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
                                         </div>
                                     </t>
-                                    <div class="form-group mb-4">
+                                    <div class="form-group mb-3">
                                         <label class="text-muted small font-weight-bold">Assignee</label>
                                         <select class="form-control" name="user_id" style="border-radius: 6px;">
                                             <option value="">-- Unassigned --</option>
@@ -347,8 +347,53 @@
                                             </t>
                                         </select>
                                     </div>
+                                    <t t-set="all_tags" t-value="request.env['project.tags'].sudo().search([])"/>
+                                    <div class="form-group mb-4 position-relative">
+                                        <label class="text-muted small font-weight-bold">Tags (Optional)</label>
+                                        <t t-if="all_tags">
+                                            <div class="ess-tag-picker-container" id="tag_picker_create">
+                                                <select name="tag_ids" multiple="multiple" class="d-none ess-hidden-tags-select">
+                                                    <t t-foreach="all_tags" t-as="tg">
+                                                        <option t-att-value="tg.id" 
+                                                                t-att-data-name="tg.name"
+                                                                t-att-data-style="tg.color_badge_style">
+                                                            <t t-esc="tg.name"/>
+                                                        </option>
+                                                    </t>
+                                                </select>
+                                                
+                                                <div class="ess-tag-trigger-box form-control d-flex flex-wrap align-items-center gap-1 p-2" 
+                                                     style="border-radius: 8px; min-height: 44px; cursor: text; background: #ffffff; border: 1px solid #ced4da;">
+                                                    <div class="ess-tag-badge-list d-flex flex-wrap gap-1 align-items-center"></div>
+                                                    <input type="text" class="ess-tag-search-input border-0 bg-transparent flex-grow-1" placeholder="Select tags..." style="outline: none; box-shadow: none; font-size: 0.85rem; min-width: 90px; color: #495057; background: transparent; padding: 2px 4px;"/>
+                                                </div>
+
+                                                <div class="ess-tag-dropdown-menu shadow-lg border rounded-3 mt-1" 
+                                                     style="display: none; position: absolute; left: 0; right: 0; max-height: 180px; overflow-y: auto; background: #ffffff; z-index: 2000; padding: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;">
+                                                    <div class="ess-tag-options-list">
+                                                        <t t-foreach="all_tags" t-as="otg">
+                                                            <div class="ess-tag-option-item d-flex align-items-center justify-content-between px-2 py-15 rounded mb-1" 
+                                                                 t-att-data-tag-id="otg.id"
+                                                                 t-att-data-name="otg.name"
+                                                                 t-att-data-style="otg.color_badge_style or 'background-color: #6c757d; color: white;'"
+                                                                 style="cursor: pointer; padding: 6px 10px; border-radius: 6px; transition: all 0.15s; background: transparent;">
+                                                                <span class="badge rounded-pill px-2 py-1" t-att-style="otg.color_badge_style or 'background-color: #6c757d; color: white;'" style="font-size: 0.8rem; font-weight: 500;">
+                                                                    <t t-esc="otg.name"/>
+                                                                </span>
+                                                                <i class="fa fa-check text-success ess-check-mark d-none"/>
+                                                            </div>
+                                                        </t>
+                                                    </div>
+                                                    <div class="ess-no-tags-found text-muted small font-italic text-center py-2 d-none" style="font-size: 0.82rem; color: #6c757d;">No matching tags found</div>
+                                                </div>
+                                            </div>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="p-2 border rounded text-muted small font-italic" style="background: #f8f9fa;">No tags available in backend.</div>
+                                        </t>
+                                    </div>
                                 </div>
-                                <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                <div class="modal-footer bg-white border-top-0 px-4 pb-4" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; background-color: #ffffff;">
                                     <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
                                     <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Create Task</button>
                                 </div>
@@ -357,6 +402,163 @@
                     </div>
                 </div>
             </t>
+            <!-- Inline Tag Picker Script for Create Task Modal -->
+            <script type="text/javascript">
+                (function() {
+                    function setupTagPickers() {
+                        document.querySelectorAll('.ess-tag-picker-container').forEach(function(container) {
+                            if (container.dataset.bound) return;
+                            container.dataset.bound = "true";
+
+                            var triggerBox = container.querySelector('.ess-tag-trigger-box');
+                            var dropdown = container.querySelector('.ess-tag-dropdown-menu');
+                            var hiddenSelect = container.querySelector('.ess-hidden-tags-select');
+                            var badgeList = container.querySelector('.ess-tag-badge-list');
+                            var searchInput = container.querySelector('.ess-tag-search-input');
+                            var optionItems = container.querySelectorAll('.ess-tag-option-item');
+
+                            if (!triggerBox || !dropdown || !hiddenSelect) return;
+
+                            function syncUI() {
+                                var selectedOpts = Array.from(hiddenSelect.options).filter(function(o) { return o.selected; });
+                                badgeList.innerHTML = '';
+
+                                if (selectedOpts.length > 0) {
+                                    if (searchInput) searchInput.placeholder = '';
+                                    selectedOpts.forEach(function(opt) {
+                                        var tagId = opt.value;
+                                        var tagName = opt.getAttribute('data-name') || opt.text;
+                                        var tagStyle = opt.getAttribute('data-style') || 'background-color: #6c757d; color: white;';
+                                        
+                                        var pill = document.createElement('span');
+                                        pill.className = 'badge rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 ess-tag-pill';
+                                        pill.setAttribute('data-tag-id', tagId);
+                                        pill.style.cssText = tagStyle + ' font-size: 0.8rem; font-weight: 500; margin-right: 4px; margin-bottom: 2px;';
+                                        pill.innerHTML = '<span>' + tagName + '</span><i class="fa fa-times ms-1 ess-rem-btn" style="cursor:pointer; margin-left: 4px; opacity: 0.85;"></i>';
+                                        
+                                        pill.querySelector('.ess-rem-btn').addEventListener('click', function(ev) {
+                                            ev.stopPropagation();
+                                            opt.selected = false;
+                                            syncUI();
+                                        });
+                                        badgeList.appendChild(pill);
+                                    });
+                                } else {
+                                    if (searchInput) searchInput.placeholder = 'Select tags...';
+                                }
+
+                                optionItems.forEach(function(item) {
+                                    var tid = item.getAttribute('data-tag-id');
+                                    var isSelected = selectedOpts.some(function(o) { return o.value == tid; });
+                                    var checkMark = item.querySelector('.ess-check-mark');
+                                    if (checkMark) {
+                                        if (isSelected) {
+                                            checkMark.classList.remove('d-none');
+                                            item.style.background = '#f0fdf4';
+                                        } else {
+                                            checkMark.classList.add('d-none');
+                                            item.style.background = 'transparent';
+                                        }
+                                    }
+                                });
+                            }
+
+                            triggerBox.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                document.querySelectorAll('.ess-tag-dropdown-menu').forEach(function(d) { 
+                                    if (d !== dropdown) d.style.display = 'none'; 
+                                });
+                                dropdown.style.display = 'block';
+                                if (searchInput) searchInput.focus();
+                            });
+
+                            if (searchInput) {
+                                searchInput.addEventListener('input', function(e) {
+                                    dropdown.style.display = 'block';
+                                    var q = e.target.value.toLowerCase().trim();
+                                    var matchCount = 0;
+                                    optionItems.forEach(function(item) {
+                                        var name = (item.getAttribute('data-name') || '').toLowerCase();
+                                        if (q === '' || name.indexOf(q) !== -1) {
+                                            item.style.setProperty('display', 'flex', 'important');
+                                            matchCount++;
+                                        } else {
+                                            item.style.setProperty('display', 'none', 'important');
+                                        }
+                                    });
+                                    var noTagsMsg = container.querySelector('.ess-no-tags-found');
+                                    if (noTagsMsg) {
+                                        if (matchCount === 0 &amp;&amp; q !== '') {
+                                            noTagsMsg.classList.remove('d-none');
+                                        } else {
+                                            noTagsMsg.classList.add('d-none');
+                                        }
+                                    }
+                                });
+
+                                searchInput.addEventListener('keydown', function(e) {
+                                    if (e.key === 'Backspace' &amp;&amp; searchInput.value === '') {
+                                        var selectedOpts = Array.from(hiddenSelect.options).filter(function(o) { return o.selected; });
+                                        if (selectedOpts.length > 0) {
+                                            var lastOpt = selectedOpts[selectedOpts.length - 1];
+                                            lastOpt.selected = false;
+                                            syncUI();
+                                        }
+                                    }
+                                });
+                            }
+
+                            optionItems.forEach(function(item) {
+                                item.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    var tid = this.getAttribute('data-tag-id');
+                                    Array.from(hiddenSelect.options).forEach(function(o) {
+                                        if (o.value == tid) {
+                                            o.selected = !o.selected;
+                                        }
+                                    });
+                                    if (searchInput) {
+                                        searchInput.value = '';
+                                        optionItems.forEach(function(it) { it.style.setProperty('display', 'flex', 'important'); });
+                                        var noTagsMsg = container.querySelector('.ess-no-tags-found');
+                                        if (noTagsMsg) noTagsMsg.classList.add('d-none');
+                                        searchInput.focus();
+                                    }
+                                    syncUI();
+                                });
+                            });
+
+                            document.addEventListener('click', function(e) {
+                                if (!container.contains(e.target)) {
+                                    dropdown.style.display = 'none';
+                                }
+                            });
+
+                            badgeList.querySelectorAll('.ess-remove-tag-icon').forEach(function(icon) {
+                                icon.addEventListener('click', function(ev) {
+                                    ev.stopPropagation();
+                                    var pill = icon.closest('.ess-tag-pill');
+                                    var tid = pill ? pill.getAttribute('data-tag-id') : null;
+                                    if (tid) {
+                                        Array.from(hiddenSelect.options).forEach(function(o) {
+                                            if (o.value == tid) o.selected = false;
+                                        });
+                                        syncUI();
+                                    }
+                                });
+                            });
+                        });
+                    }
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', setupTagPickers);
+                    } else {
+                        setupTagPickers();
+                    }
+                    
+                    document.addEventListener('shown.bs.modal', setupTagPickers);
+                })();
+            </script>
 
             <!-- Kanban View (Dynamic Columns based on GroupBy) -->
             <t t-if="view_type == 'kanban'">
@@ -376,6 +578,15 @@
                                                 <t t-esc="task.name"/>
                                             </a>
                                         </div>
+                                        <t t-if="task.tag_ids">
+                                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                                <t t-foreach="task.tag_ids" t-as="tag">
+                                                    <span class="badge rounded-pill mr-1 mb-1 px-2 py-1" t-att-style="tag.color_badge_style or 'background-color: #6c757d; color: white;'" style="font-size: 0.7rem; font-weight: 500;">
+                                                        <t t-esc="tag.name"/>
+                                                    </span>
+                                                </t>
+                                            </div>
+                                        </t>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <small class="text-muted">
                                                 <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
@@ -495,6 +706,7 @@
                                 <tr style="background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
                                     <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Task Title</th>
                                     <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Stage</th>
+                                    <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Tags</th>
                                     <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Assignees</th>
                                     <th style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Deadline</th>
                                     <th class="text-end" style="padding: 12px 15px; border-bottom: 2px solid #e2e8f0;">Allocated Hours</th>
@@ -506,7 +718,7 @@
                                         <tr t-attf-class="tsk-group-header-row font-weight-bold {{ ('tsk-group-child ' + row['parent_class']) if row['parent_class'] != 'tgrp' else '' }}"
                                             t-attf-data-group-target="{{ row['my_class'] }}"
                                             t-attf-style="{{ ('display: none;' if row['parent_class'] != 'tgrp' else '') }} background: {{ row['bg_color'] }}; color: #3b0764; cursor: pointer; user-select: none;">
-                                            <td colspan="4" t-attf-style="padding-left: {{ row['padding_left'] }}px; padding-top: 10px; padding-bottom: 10px;">
+                                            <td colspan="5" t-attf-style="padding-left: {{ row['padding_left'] }}px; padding-top: 10px; padding-bottom: 10px;">
                                                 <i class="fa fa-chevron-right me-2 tsk-group-icon" style="transition: transform 0.2s ease; width: 14px; text-align: center; color: #4c1d95;"/>
                                                 <t t-esc="row['label']"/>
                                                 <span class="badge bg-secondary ms-2 rounded-pill font-weight-normal" style="font-size: 0.75rem;">
@@ -530,6 +742,18 @@
                                             </td>
                                             <td style="padding: 12px 15px;">
                                                 <span class="badge badge-light text-primary" style="background: var(--ess-light); color: var(--ess-violet); font-size: 0.85rem;"><t t-esc="task.stage_id.name if task.stage_id else '-'"/></span>
+                                            </td>
+                                            <td style="padding: 12px 15px;">
+                                                <t t-if="task.tag_ids">
+                                                    <t t-foreach="task.tag_ids" t-as="tag">
+                                                        <span class="badge rounded-pill mr-1 mb-1 px-2 py-1" t-att-style="tag.color_badge_style or 'background-color: #6c757d; color: white;'" style="font-size: 0.75rem; font-weight: 500;">
+                                                            <t t-esc="tag.name"/>
+                                                        </span>
+                                                    </t>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted small">-</span>
+                                                </t>
                                             </td>
                                             <td style="padding: 12px 15px;">
                                                 <span class="text-muted" style="font-size: 0.85rem;"><t t-esc="', '.join(task.user_ids.mapped('name')) if task.user_ids else 'Unassigned'"/></span>
@@ -884,7 +1108,7 @@
                                 </div>
                             </t>
 
-                            <div class="mb-3">
+                             <div class="mb-3">
                                 <strong>Assignees:</strong><br/>
                                 <div class="d-flex flex-wrap gap-2 mt-2" style="gap: 8px;">
                                     <t t-if="task.user_ids">
@@ -899,6 +1123,22 @@
                                     </t>
                                     <t t-else="">
                                         <span class="text-muted">Unassigned</span>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong class="text-dark">Tags:</strong><br/>
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    <t t-if="task.tag_ids">
+                                        <t t-foreach="task.tag_ids" t-as="tag">
+                                            <span class="badge rounded-pill mr-1 mb-1 px-2 py-1" t-att-style="tag.color_badge_style or 'background-color: #6c757d; color: white;'" style="font-size: 0.8rem; font-weight: 500;">
+                                                <i class="fa fa-tag me-1"/> <t t-esc="tag.name"/>
+                                            </span>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="text-muted small">None</span>
                                     </t>
                                 </div>
                             </div>
@@ -960,18 +1200,18 @@
             <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_task_create')">
                 <div class="modal fade" id="editTaskModal" tabindex="-1" role="dialog" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered" role="document">
-                        <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-content border-0 shadow" style="background-color: #ffffff; border-radius: 12px; overflow: visible;">
                             <form action="/my/tasks/update" method="post">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <input type="hidden" name="task_id" t-att-value="task.id"/>
                                 
-                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center" style="border-top-left-radius: 12px; border-top-right-radius: 12px; background-color: #ffffff;">
                                     <h5 class="modal-title font-weight-bold text-dark">Edit Task</h5>
                                     <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
                                         <span aria-hidden="true">&amp;times;</span>
                                     </button>
                                 </div>
-                                <div class="modal-body px-4 pt-3">
+                                <div class="modal-body px-4 pt-3 bg-white" style="overflow: visible; background-color: #ffffff;">
                                     <div class="form-group mb-3">
                                         <label class="text-muted small font-weight-bold">Project</label>
                                         <input type="text" class="form-control" t-att-value="task.project_id.name" disabled="1" style="border-radius: 6px;"/>
@@ -983,7 +1223,7 @@
                                     </div>
                                     <div class="form-group mb-3">
                                         <label class="text-muted small font-weight-bold">Description</label>
-                                        <textarea class="form-control" name="description" rows="3" style="border-radius: 6px;"><t t-if="task.description" t-esc="task.description"/></textarea>
+                                        <textarea class="form-control" name="description" rows="3" style="border-radius: 6px;"><t t-if="task.description" t-esc="task.description_plain or ''"/></textarea>
                                     </div>
                                     <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
                                         <div class="form-group mb-4">
@@ -1005,7 +1245,7 @@
                                             <input type="text" class="form-control" name="client_allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.client_allocated_hours), int((task.client_allocated_hours - int(task.client_allocated_hours)) * 60)) if task.client_allocated_hours else ''" style="border-radius: 6px;"/>
                                         </div>
                                     </t>
-                                    <div class="form-group mb-4">
+                                    <div class="form-group mb-3">
                                         <label class="text-muted small font-weight-bold">Assignee</label>
                                         <select class="form-control" name="user_id" style="border-radius: 6px;">
                                             <option value="">-- Unassigned --</option>
@@ -1021,8 +1261,68 @@
                                             </t>
                                         </select>
                                     </div>
+                                    <t t-set="all_tags" t-value="request.env['project.tags'].sudo().search([])"/>
+                                    <div class="form-group mb-4 position-relative">
+                                        <label class="text-muted small font-weight-bold">Tags</label>
+                                        <t t-if="all_tags">
+                                            <div class="ess-tag-picker-container" t-att-id="'tag_picker_' + str(task.id)">
+                                                <select name="tag_ids" multiple="multiple" class="d-none ess-hidden-tags-select">
+                                                    <t t-foreach="all_tags" t-as="tg">
+                                                        <option t-att-value="tg.id" 
+                                                                t-att-selected="'selected' if (task and tg.id in task.tag_ids.ids) else None"
+                                                                t-att-data-name="tg.name"
+                                                                t-att-data-style="tg.color_badge_style">
+                                                            <t t-esc="tg.name"/>
+                                                        </option>
+                                                    </t>
+                                                </select>
+                                                
+                                                <div class="ess-tag-trigger-box form-control d-flex flex-wrap align-items-center gap-1 p-2" 
+                                                     style="border-radius: 8px; min-height: 44px; cursor: text; background: #ffffff; border: 1px solid #ced4da;">
+                                                    <div class="ess-tag-badge-list d-flex flex-wrap gap-1 align-items-center">
+                                                        <t t-if="task and task.tag_ids">
+                                                            <t t-foreach="task.tag_ids" t-as="stg">
+                                                                <span class="badge rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 ess-tag-pill" 
+                                                                      t-att-data-tag-id="stg.id"
+                                                                      t-att-style="(stg.color_badge_style or 'background-color: #6c757d; color: white;') + ' font-size: 0.8rem; font-weight: 500; margin-right: 4px; margin-bottom: 2px;'">
+                                                                    <t t-esc="stg.name"/>
+                                                                    <i class="fa fa-times ms-1 ess-remove-tag-icon" style="cursor: pointer; opacity: 0.85; margin-left: 4px;"/>
+                                                                </span>
+                                                            </t>
+                                                        </t>
+                                                    </div>
+                                                    <input type="text" class="ess-tag-search-input border-0 bg-transparent flex-grow-1" 
+                                                           t-att-placeholder="'' if (task and task.tag_ids) else 'Select tags...'" 
+                                                           style="outline: none; box-shadow: none; font-size: 0.85rem; min-width: 100px; color: #495057; background: transparent; padding: 2px 4px;"/>
+                                                </div>
+
+                                                <div class="ess-tag-dropdown-menu shadow-lg border rounded-3 mt-1" 
+                                                     style="display: none; position: absolute; left: 0; right: 0; max-height: 180px; overflow-y: auto; background: #ffffff; z-index: 2000; padding: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;">
+                                                    <div class="ess-tag-options-list">
+                                                        <t t-foreach="all_tags" t-as="otg">
+                                                            <t t-set="is_sel" t-value="bool(task and otg.id in task.tag_ids.ids)"/>
+                                                            <div class="ess-tag-option-item d-flex align-items-center justify-content-between px-2 py-15 rounded mb-1" 
+                                                                 t-att-data-tag-id="otg.id"
+                                                                 t-att-data-name="otg.name"
+                                                                 t-att-data-style="otg.color_badge_style or 'background-color: #6c757d; color: white;'"
+                                                                 t-att-style="'cursor: pointer; padding: 6px 10px; border-radius: 6px; transition: all 0.15s; background: ' + ('#f0fdf4;' if is_sel else 'transparent;')">
+                                                                <span class="badge rounded-pill px-2 py-1" t-att-style="otg.color_badge_style or 'background-color: #6c757d; color: white;'" style="font-size: 0.8rem; font-weight: 500;">
+                                                                    <t t-esc="otg.name"/>
+                                                                </span>
+                                                                <i t-attf-class="fa fa-check text-success ess-check-mark #{'' if is_sel else 'd-none'}"/>
+                                                            </div>
+                                                        </t>
+                                                    </div>
+                                                    <div class="ess-no-tags-found text-muted small font-italic text-center py-2 d-none" style="font-size: 0.82rem; color: #6c757d;">No matching tags found</div>
+                                                </div>
+                                            </div>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="p-2 border rounded text-muted small font-italic" style="background: #f8f9fa;">No tags available in backend.</div>
+                                        </t>
+                                    </div>
                                 </div>
-                                <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                <div class="modal-footer bg-white border-top-0 px-4 pb-4" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; background-color: #ffffff;">
                                     <button type="button" class="btn" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Cancel</button>
                                     <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Save Changes</button>
                                 </div>
@@ -1031,6 +1331,162 @@
                     </div>
                 </div>
             </t>
+
+            <!-- Inline Tag Picker Script -->
+            <script type="text/javascript">
+                (function() {
+                    function setupTagPickers() {
+                        document.querySelectorAll('.ess-tag-picker-container').forEach(function(container) {
+                            if (container.dataset.bound) return;
+                            container.dataset.bound = "true";
+
+                            var triggerBox = container.querySelector('.ess-tag-trigger-box');
+                            var dropdown = container.querySelector('.ess-tag-dropdown-menu');
+                            var hiddenSelect = container.querySelector('.ess-hidden-tags-select');
+                            var badgeList = container.querySelector('.ess-tag-badge-list');
+                            var searchInput = container.querySelector('.ess-tag-search-input');
+                            var optionItems = container.querySelectorAll('.ess-tag-option-item');
+
+                            function syncUI() {
+                                var selectedOpts = Array.from(hiddenSelect.options).filter(function(o) { return o.selected; });
+                                badgeList.innerHTML = '';
+
+                                if (selectedOpts.length > 0) {
+                                    if (searchInput) searchInput.placeholder = '';
+                                    selectedOpts.forEach(function(opt) {
+                                        var tagId = opt.value;
+                                        var tagName = opt.getAttribute('data-name') || opt.text;
+                                        var tagStyle = opt.getAttribute('data-style') || 'background-color: #6c757d; color: white;';
+                                        
+                                        var pill = document.createElement('span');
+                                        pill.className = 'badge rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 ess-tag-pill';
+                                        pill.setAttribute('data-tag-id', tagId);
+                                        pill.style.cssText = tagStyle + ' font-size: 0.8rem; font-weight: 500; margin-right: 4px; margin-bottom: 2px;';
+                                        pill.innerHTML = '<span>' + tagName + '</span><i class="fa fa-times ms-1 ess-rem-btn" style="cursor:pointer; margin-left: 4px; opacity: 0.85;"></i>';
+                                        
+                                        pill.querySelector('.ess-rem-btn').addEventListener('click', function(ev) {
+                                            ev.stopPropagation();
+                                            opt.selected = false;
+                                            syncUI();
+                                        });
+                                        badgeList.appendChild(pill);
+                                    });
+                                } else {
+                                    if (searchInput) searchInput.placeholder = 'Select tags...';
+                                }
+
+                                optionItems.forEach(function(item) {
+                                    var tid = item.getAttribute('data-tag-id');
+                                    var isSelected = selectedOpts.some(function(o) { return o.value == tid; });
+                                    var checkMark = item.querySelector('.ess-check-mark');
+                                    if (checkMark) {
+                                        if (isSelected) {
+                                            checkMark.classList.remove('d-none');
+                                            item.style.background = '#f0fdf4';
+                                        } else {
+                                            checkMark.classList.add('d-none');
+                                            item.style.background = 'transparent';
+                                        }
+                                    }
+                                });
+                            }
+
+                            triggerBox.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                document.querySelectorAll('.ess-tag-dropdown-menu').forEach(function(d) { 
+                                    if (d !== dropdown) d.style.display = 'none'; 
+                                });
+                                dropdown.style.display = 'block';
+                                if (searchInput) searchInput.focus();
+                            });
+
+                            if (searchInput) {
+                                searchInput.addEventListener('input', function(e) {
+                                    dropdown.style.display = 'block';
+                                    var q = e.target.value.toLowerCase().trim();
+                                    var matchCount = 0;
+                                    optionItems.forEach(function(item) {
+                                        var name = (item.getAttribute('data-name') || '').toLowerCase();
+                                        if (q === '' || name.indexOf(q) !== -1) {
+                                            item.style.setProperty('display', 'flex', 'important');
+                                            matchCount++;
+                                        } else {
+                                            item.style.setProperty('display', 'none', 'important');
+                                        }
+                                    });
+                                    var noTagsMsg = container.querySelector('.ess-no-tags-found');
+                                    if (noTagsMsg) {
+                                        if (matchCount === 0 &amp;&amp; q !== '') {
+                                            noTagsMsg.classList.remove('d-none');
+                                        } else {
+                                            noTagsMsg.classList.add('d-none');
+                                        }
+                                    }
+                                });
+
+                                searchInput.addEventListener('keydown', function(e) {
+                                    if (e.key === 'Backspace' &amp;&amp; searchInput.value === '') {
+                                        var selectedOpts = Array.from(hiddenSelect.options).filter(function(o) { return o.selected; });
+                                        if (selectedOpts.length > 0) {
+                                            var lastOpt = selectedOpts[selectedOpts.length - 1];
+                                            lastOpt.selected = false;
+                                            syncUI();
+                                        }
+                                    }
+                                });
+                            }
+
+                            optionItems.forEach(function(item) {
+                                item.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    var tid = this.getAttribute('data-tag-id');
+                                    Array.from(hiddenSelect.options).forEach(function(o) {
+                                        if (o.value == tid) {
+                                            o.selected = !o.selected;
+                                        }
+                                    });
+                                    if (searchInput) {
+                                        searchInput.value = '';
+                                        optionItems.forEach(function(it) { it.style.setProperty('display', 'flex', 'important'); });
+                                        var noTagsMsg = container.querySelector('.ess-no-tags-found');
+                                        if (noTagsMsg) noTagsMsg.classList.add('d-none');
+                                        searchInput.focus();
+                                    }
+                                    syncUI();
+                                });
+                            });
+
+                            document.addEventListener('click', function(e) {
+                                if (!container.contains(e.target)) {
+                                    dropdown.style.display = 'none';
+                                }
+                            });
+
+                            badgeList.querySelectorAll('.ess-remove-tag-icon').forEach(function(icon) {
+                                icon.addEventListener('click', function(ev) {
+                                    ev.stopPropagation();
+                                    var pill = icon.closest('.ess-tag-pill');
+                                    var tid = pill ? pill.getAttribute('data-tag-id') : null;
+                                    if (tid) {
+                                        Array.from(hiddenSelect.options).forEach(function(o) {
+                                            if (o.value == tid) o.selected = false;
+                                        });
+                                        syncUI();
+                                    }
+                                });
+                            });
+                        });
+                    }
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', setupTagPickers);
+                    } else {
+                        setupTagPickers();
+                    }
+                    
+                    document.addEventListener('shown.bs.modal', setupTagPickers);
+                })();
+            </script>
 
             <script type="text/javascript">
                 document.addEventListener('DOMContentLoaded', function() {

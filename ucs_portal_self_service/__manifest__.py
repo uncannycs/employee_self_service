@@ -33,9 +33,8 @@
     'assets': {
         'web.assets_frontend': [
             'ucs_portal_self_service/static/src/js/attendance_widget.js',
+            'ucs_portal_self_service/static/src/js/portal_tag_picker.js',
             'ucs_portal_self_service/static/src/css/style.css',
-            # portal_chat.css, portal_mentions.css, portal_floating_chat.css → ucs_employee_messages
-            # portal_chat.js, portal_floating_chat.js, portal_mentions.js → ucs_employee_messages
         ],
     },
     'installable': True,

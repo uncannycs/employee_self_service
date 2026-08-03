@@ -472,6 +472,7 @@ class PortalCustomProjects(ProjectCustomerPortal):
 
         is_employee = bool(request.env['hr.employee'].sudo().search([('user_id', '=', request.env.user.id)], limit=1))
         assignable_users = request.env['res.users'].sudo().search([])
+        all_tags = request.env['project.tags'].sudo().search([])
 
         kanban_columns = self._build_kanban_columns(tasks, groupby, stages)
 
@@ -497,6 +498,7 @@ class PortalCustomProjects(ProjectCustomerPortal):
             'error_message': kwargs.get('error'),
             'is_employee': is_employee,
             'assignable_users': assignable_users,
+            'all_tags': all_tags,
         })
         return values
 
@@ -603,6 +605,7 @@ class PortalCustomProjects(ProjectCustomerPortal):
 
         values['is_employee'] = is_employee
         values['assignable_users'] = assignable_users
+        values['all_tags'] = request.env['project.tags'].sudo().search([])
         return values
 
     # KEEP OUR CUSTOM API ENDPOINTS BUT RENAME THEM
@@ -641,12 +644,17 @@ class PortalCustomProjects(ProjectCustomerPortal):
         allocated_hours_str = post.get('allocated_hours_str')
         user_id = int(post.get('user_id', 0)) if post.get('user_id') else False
         
+        tag_ids_raw = request.httprequest.form.getlist('tag_ids')
+        tag_ids = [int(tid) for tid in tag_ids_raw if tid and str(tid).isdigit()]
+        
         if project_id and name:
             vals = {
                 'name': name,
                 'project_id': project_id,
                 'description': description,
             }
+            if tag_ids:
+                vals['tag_ids'] = [(6, 0, tag_ids)]
             if date_deadline:
                 vals['date_deadline'] = date_deadline
             if allocated_hours_str:
@@ -694,10 +702,14 @@ class PortalCustomProjects(ProjectCustomerPortal):
         allocated_hours_str = post.get('allocated_hours_str')
         user_id = int(post.get('user_id', 0)) if post.get('user_id') else False
         
+        tag_ids_raw = request.httprequest.form.getlist('tag_ids')
+        tag_ids = [int(tid) for tid in tag_ids_raw if tid and str(tid).isdigit()]
+        
         if name:
             vals = {
                 'name': name,
                 'description': description,
+                'tag_ids': [(6, 0, tag_ids)],
             }
             if date_deadline:
                 vals['date_deadline'] = date_deadline

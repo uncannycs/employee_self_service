@@ -248,6 +248,65 @@
                         </t>
                     </div>
 
+                    <!-- Weekly Timesheet Progress Widget -->
+                    <t t-if="is_employee and weekly_target_hours">
+                        <div class="card border-0 shadow-sm mt-4 mb-2" style="border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;">
+                            <div class="card-body p-4">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div style="background-color: #f3e8ff; color: #4a148c; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                            <i class="fa fa-calendar-check-o"/>
+                                        </div>
+                                        <div>
+                                            <h6 class="font-weight-bold text-dark mb-1" style="font-size: 1.05rem;">
+                                                Weekly Timesheet Progress
+                                            </h6>
+                                            <span class="text-muted small">
+                                                Schedule: <strong class="text-dark"><t t-esc="weekly_calendar_name"/></strong>
+                                                (<t t-esc="week_start_date"/> - <t t-esc="week_end_date"/>)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <t t-if="weekly_logged_hours >= weekly_target_hours">
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #dcfce7; color: #15803d; font-size: 0.85rem; font-weight: 600;">
+                                                <i class="fa fa-check-circle me-1"/> Weekly Target Completed!
+                                            </span>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f3e8ff; color: #6b21a8; font-size: 0.85rem; font-weight: 600;">
+                                                <i class="fa fa-clock-o me-1"/> <t t-esc="weekly_remaining_hours_str"/> Remaining
+                                            </span>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Bar -->
+                                <div class="progress mb-3" style="height: 12px; border-radius: 10px; background-color: #f1f5f9;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                         t-att-style="'width: ' + str(weekly_progress_pct) + '%; background-color: ' + ('#22c55e' if weekly_logged_hours >= weekly_target_hours else '#4a148c') + '; border-radius: 10px;'" 
+                                         t-att-aria-valuenow="weekly_progress_pct" aria-valuemin="0" aria-valuemax="100"/>
+                                </div>
+
+                                <!-- Stats Grid -->
+                                <div class="row text-center pt-2">
+                                    <div class="col-4 border-end">
+                                        <span class="text-muted small d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">TARGET / WEEK</span>
+                                        <h5 class="font-weight-bold text-dark mb-0 mt-1" style="font-size: 1.2rem;"><t t-esc="weekly_target_hours_str"/> <small class="text-muted" style="font-size: 0.75rem;">Hrs</small></h5>
+                                    </div>
+                                    <div class="col-4 border-end">
+                                        <span class="text-muted small d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">LOGGED THIS WEEK</span>
+                                        <h5 class="font-weight-bold text-primary mb-0 mt-1" style="font-size: 1.2rem; color: #4a148c !important;"><t t-esc="weekly_logged_hours_str"/> <small class="text-muted" style="font-size: 0.75rem;">Hrs</small></h5>
+                                    </div>
+                                    <div class="col-4">
+                                        <span class="text-muted small d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">COMPLETED</span>
+                                        <h5 class="font-weight-bold text-success mb-0 mt-1" style="font-size: 1.2rem;"><t t-esc="weekly_progress_pct"/>%</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+
                     <!-- Middle Grid: Team Task Deadlines & Team Leaves -->
                     <t t-if="is_employee">
                         <div class="row mt-4">

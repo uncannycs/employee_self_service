@@ -6,6 +6,196 @@ from odoo.addons.hr_timesheet.controllers.portal import TimesheetCustomerPortal
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 
+from .main import _get_weekly_timesheet_info
+
+def _get_timesheet_calendar_data(user, year=None, month=None, employee_id=None):
+    is_manager = _is_timesheet_manager(user)
+    
+    employees_list = []
+    if is_manager:
+        all_emps = request.env['hr.employee'].sudo().search([])
+        employees_list = [{'id': e.id, 'name': e.name} for e in all_emps]
+
+    if is_manager and employee_id:
+        employee = request.env['hr.employee'].sudo().browse(int(employee_id))
+    else:
+        employee = request.env['hr.employee'].sudo().search(['|', ('user_id', '=', user.id), ('work_email', '=', user.login)], limit=1)
+
+    if not employee:
+        return {'is_manager': is_manager, 'employees': employees_list, 'employee_id': None, 'days_data': {}}
+
+    from datetime import date, datetime, timedelta
+    import calendar as py_calendar
+    
+    today = date.today()
+    if not year:
+        year = today.year
+    if not month:
+        month = today.month
+        
+    res_calendar = employee.resource_calendar_id or (employee.company_id and employee.company_id.resource_calendar_id)
+    
+    day_scheduled_hours = {}
+    hours_per_day = 8.0
+    if res_calendar:
+        if getattr(res_calendar, 'hours_per_day', False) and res_calendar.hours_per_day > 0:
+            hours_per_day = float(res_calendar.hours_per_day)
+        elif getattr(res_calendar, 'hours_per_week', False) and res_calendar.hours_per_week > 0:
+            hours_per_day = round(float(res_calendar.hours_per_week) / 5.0, 2)
+
+    if res_calendar and res_calendar.attendance_ids:
+        for day_idx in range(7):
+            day_str = str(day_idx)
+            attendances = res_calendar.attendance_ids.filtered(lambda a: a.dayofweek == day_str and not getattr(a, 'display_type', False))
+            if attendances:
+                day_scheduled_hours[day_idx] = hours_per_day
+            else:
+                day_scheduled_hours[day_idx] = 0.0
+    else:
+        day_scheduled_hours = {0: hours_per_day, 1: hours_per_day, 2: hours_per_day, 3: hours_per_day, 4: hours_per_day, 5: 0.0, 6: 0.0}
+
+    first_weekday, num_days = py_calendar.monthrange(year, month)
+    start_date = date(year, month, 1)
+    end_date = date(year, month, num_days)
+
+    domain = [
+        ('employee_id', '=', employee.id),
+        ('date', '>=', start_date),
+        ('date', '<=', end_date),
+    ]
+    timesheets = request.env['account.analytic.line'].sudo().search(domain)
+    
+    days_data = {}
+    for day_num in range(1, num_days + 1):
+        d = date(year, month, day_num)
+        d_str = d.strftime('%Y-%m-%d')
+        w_idx = d.weekday()
+        sch_hrs = day_scheduled_hours.get(w_idx, 8.0 if w_idx < 5 else 0.0)
+        is_future = (d > today)
+        
+        day_ts = timesheets.filtered(lambda ts: ts.date == d)
+        leave_ts = day_ts.filtered(lambda ts: ts.holiday_id)
+        reg_ts = day_ts.filtered(lambda ts: not ts.holiday_id)
+        
+        reg_hrs = sum(ts.unit_amount for ts in reg_ts)
+        leave_hrs = sum(ts.unit_amount for ts in leave_ts)
+        tot_hrs = reg_hrs + leave_hrs
+        
+        has_leave = bool(leave_hrs > 0)
+        
+        status_code = 'neutral'
+        if sch_hrs > 0:
+            if has_leave:
+                leaves = leave_ts.mapped('holiday_id')
+                is_half = any(getattr(l, 'request_unit_half', False) for l in leaves)
+                
+                # Full day leave check: not marked half-day OR leave hours cover 85%+ of scheduled hours
+                if not is_half or leave_hrs >= (sch_hrs * 0.85):
+                    status_code = 'yellow'
+                else:
+                    period = 'am'
+                    for l in leaves:
+                        p = getattr(l, 'request_date_from_period', False)
+                        if p in ['am', 'pm']:
+                            period = p
+                            break
+                    
+                    rem_sch = max(sch_hrs - leave_hrs, 0.0)
+                    is_work_complete = (reg_hrs >= (rem_sch - 0.1))
+                    
+                    if period == 'am':
+                        if is_work_complete:
+                            status_code = 'yellow_top_green_bottom'
+                        else:
+                            status_code = 'yellow_top_red_bottom' if not is_future else 'yellow'
+                    else:
+                        if is_work_complete:
+                            status_code = 'green_top_yellow_bottom'
+                        else:
+                            status_code = 'red_top_yellow_bottom' if not is_future else 'yellow'
+            else:
+                if reg_hrs >= (sch_hrs - 0.1):
+                    status_code = 'green'
+                else:
+                    if not is_future:
+                        status_code = 'red'
+                    else:
+                        status_code = 'neutral'
+        else:
+            if tot_hrs > 0:
+                status_code = 'green'
+            else:
+                status_code = 'neutral'
+
+        days_data[d_str] = {
+            'date': d_str,
+            'day': day_num,
+            'weekday': w_idx,
+            'scheduled_hours': sch_hrs,
+            'regular_hours': reg_hrs,
+            'leave_hours': leave_hrs,
+            'total_hours': tot_hrs,
+            'has_leave': has_leave,
+            'is_future': is_future,
+            'status_code': status_code,
+            'entries': [{
+                'id': ts.id,
+                'name': ts.name or '',
+                'project': ts.project_id.name if ts.project_id else '',
+                'task': ts.task_id.name if ts.task_id else '',
+                'hours': ts.unit_amount,
+                'is_leave': bool(ts.holiday_id),
+                'state': ts.state or 'draft',
+            } for ts in day_ts]
+        }
+
+    prev_d = start_date - timedelta(days=1)
+    next_d = end_date + timedelta(days=1)
+
+    monthly_scheduled_hours = round(sum(d['scheduled_hours'] for d in days_data.values()), 2)
+    monthly_leave_hours = round(sum(d['leave_hours'] for d in days_data.values()), 2)
+    monthly_net_required = max(round(monthly_scheduled_hours - monthly_leave_hours, 2), 0.0)
+    monthly_regular_hours = round(sum(d['regular_hours'] for d in days_data.values()), 2)
+
+    # Required till today (excluding leave till today)
+    sch_till_today = sum(d['scheduled_hours'] for date_str, d in days_data.items() if date.fromisoformat(date_str) <= today)
+    lve_till_today = sum(d['leave_hours'] for date_str, d in days_data.items() if date.fromisoformat(date_str) <= today)
+    required_till_today_hours = max(round(sch_till_today - lve_till_today, 2), 0.0)
+
+    if year == today.year and month == today.month:
+        target_pct_hrs = required_till_today_hours if required_till_today_hours > 0 else monthly_net_required
+    elif (year < today.year) or (year == today.year and month < today.month):
+        target_pct_hrs = monthly_net_required
+    else:
+        target_pct_hrs = monthly_net_required
+
+    monthly_completion_pct = round((monthly_regular_hours / target_pct_hrs * 100.0), 1) if target_pct_hrs > 0 else 0.0
+
+    return {
+        'year': year,
+        'month': month,
+        'month_name': start_date.strftime('%B %Y'),
+        'first_weekday': first_weekday,
+        'num_days': num_days,
+        'prev_year': prev_d.year,
+        'prev_month': prev_d.month,
+        'next_year': next_d.year,
+        'next_month': next_d.month,
+        'days_data': days_data,
+        'employee_id': employee.id,
+        'employee_name': employee.name,
+        'is_manager': is_manager,
+        'employees': employees_list,
+        'monthly_scheduled_hours': monthly_scheduled_hours,
+        'monthly_required_hours': monthly_scheduled_hours,
+        'monthly_net_required': monthly_net_required,
+        'required_till_today_hours': required_till_today_hours,
+        'monthly_regular_hours': monthly_regular_hours,
+        'monthly_leave_hours': monthly_leave_hours,
+        'monthly_total_logged': monthly_regular_hours,
+        'monthly_completion_pct': monthly_completion_pct,
+    }
+
 def _is_timesheet_manager(user):
     return (
         user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_manager') or
@@ -333,6 +523,22 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
             }
             order = order_mapping.get(sortby, 'date desc, id desc')
 
+            # Auto-sync leave timesheet states
+            approved_leave_ts = request.env['account.analytic.line'].sudo().search([
+                ('holiday_id', '!=', False),
+                ('holiday_id.state', 'in', ['validate', 'validate1']),
+                ('state', '!=', 'approved')
+            ])
+            if approved_leave_ts:
+                approved_leave_ts.write({'state': 'approved'})
+
+            refused_leave_ts = request.env['account.analytic.line'].sudo().search([
+                ('holiday_id', '!=', False),
+                ('holiday_id.state', 'in', ['refuse', 'cancel'])
+            ])
+            if refused_leave_ts:
+                refused_leave_ts.with_context(leave_unlink=True).sudo().unlink()
+
             timesheets = request.env['account.analytic.line'].sudo().search(domain, order=order)
             qctx['timesheets'] = timesheets
 
@@ -351,6 +557,8 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
             qctx['search_in'] = search_in
             qctx['search'] = search
             qctx['scope'] = scope
+            qctx.update(_get_weekly_timesheet_info(user))
+            qctx['calendar_data'] = _get_timesheet_calendar_data(user)
 
             # Populate failsafe searchbar dictionaries
             filters = self._get_searchbar_filters()
@@ -437,3 +645,14 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
         tasks = request.env['project.task'].search([('project_id', '=', project_id)])
 
         return [{'id': t.id, 'name': t.name} for t in tasks]
+
+    @http.route('/my/timesheets/calendar_data', type='json', auth='user')
+    def get_timesheet_calendar_data_route(self, year=None, month=None, employee_id=None, **kw):
+        user = request.env.user
+        try:
+            year = int(year) if year else None
+            month = int(month) if month else None
+            employee_id = int(employee_id) if employee_id else None
+        except Exception:
+            year, month, employee_id = None, None, None
+        return _get_timesheet_calendar_data(user, year=year, month=month, employee_id=employee_id)

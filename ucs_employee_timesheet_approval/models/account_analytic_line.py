@@ -14,6 +14,17 @@ class AccountAnalyticLine(models.Model):
     
     reject_reason = fields.Text(string='Reject Reason', copy=False)
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('holiday_id'):
+                vals['state'] = 'approved'
+        lines = super(AccountAnalyticLine, self).create(vals_list)
+        for line in lines:
+            if line.holiday_id and line.state != 'approved':
+                line.write({'state': 'approved'})
+        return lines
+
     def action_submit(self):
         submittable_lines = self.filtered(lambda l: not getattr(l, 'holiday_id', False))
         for line in submittable_lines:
@@ -120,6 +131,14 @@ class AccountAnalyticLine(models.Model):
 
     @api.ondelete(at_uninstall=False)
     def _unlink_except_approved(self):
+        if self.env.context.get('leave_unlink'):
+            return
         for line in self:
             if line.state in ['confirm', 'approved'] and not self.env.su:
                 raise UserError(_("You cannot delete a submitted or approved timesheet."))
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_linked_leave(self):
+        if self.env.context.get('leave_unlink') or self.env.su:
+            return
+        return super(AccountAnalyticLine, self)._unlink_except_linked_leave()

@@ -31,6 +31,53 @@ def _to_user_time(dt_utc, user_tz):
     return dt_local.strftime('%H:%M')
 
 
+def _get_weekly_timesheet_info(user):
+    employee = request.env['hr.employee'].sudo().search(['|', ('user_id', '=', user.id), ('work_email', '=', user.login)], limit=1)
+    if not employee:
+        return {}
+    
+    calendar = employee.resource_calendar_id or (employee.company_id and employee.company_id.resource_calendar_id)
+    target_hours = 40.0
+    if calendar:
+        if hasattr(calendar, 'hours_per_week') and calendar.hours_per_week > 0:
+            target_hours = float(calendar.hours_per_week)
+        elif hasattr(calendar, 'full_time_required_hours') and calendar.full_time_required_hours > 0:
+            target_hours = float(calendar.full_time_required_hours)
+
+    from datetime import date, timedelta
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    timesheets = request.env['account.analytic.line'].sudo().search([
+        ('employee_id', '=', employee.id),
+        ('date', '>=', start_of_week),
+        ('date', '<=', end_of_week),
+    ])
+    
+    logged_hours = sum(ts.unit_amount for ts in timesheets)
+    remaining_hours = max(0.0, target_hours - logged_hours)
+    progress_pct = min(100.0, round((logged_hours / target_hours) * 100, 1)) if target_hours > 0 else 0.0
+    
+    def format_hrs(val):
+        h = int(val)
+        m = int(round((val - h) * 60))
+        return f"{h:02d}:{m:02d}"
+
+    return {
+        'weekly_calendar_name': calendar.name if calendar else 'Standard Schedule',
+        'weekly_target_hours': target_hours,
+        'weekly_target_hours_str': format_hrs(target_hours),
+        'weekly_logged_hours': logged_hours,
+        'weekly_logged_hours_str': format_hrs(logged_hours),
+        'weekly_remaining_hours': remaining_hours,
+        'weekly_remaining_hours_str': format_hrs(remaining_hours),
+        'weekly_progress_pct': progress_pct,
+        'week_start_date': start_of_week.strftime('%d %b'),
+        'week_end_date': end_of_week.strftime('%d %b %Y'),
+    }
+
+
 def _attendance_values(employee):
     """Return current attendance status for the employee."""
     user_tz = request.env.user.tz or 'UTC'
@@ -112,6 +159,7 @@ class CustomCustomerPortal(CustomerPortal):
         if employee:
             att = _attendance_values(employee)
             values.update(att)
+            values.update(_get_weekly_timesheet_info(user))
             
             # Fetch Announcements for employees
             announcements = request.env['ucs.portal.announcement'].sudo().search([('active', '=', True)], order='date desc, id desc')

@@ -28,6 +28,17 @@ class HrLeave(models.Model):
         res = super(HrLeave, self).action_approve(*args, **kwargs)
         for leave in self:
             leave._send_leave_approval_email_to_employee()
+            timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', '=', leave.id)])
+            if timesheets:
+                timesheets.write({'state': 'approved'})
+        return res
+
+    def action_validate(self, *args, **kwargs):
+        res = super(HrLeave, self).action_validate(*args, **kwargs) if hasattr(super(HrLeave, self), 'action_validate') else True
+        for leave in self:
+            timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', '=', leave.id)])
+            if timesheets:
+                timesheets.write({'state': 'approved'})
         return res
 
     def _track_subtype(self, init_values):
@@ -39,7 +50,29 @@ class HrLeave(models.Model):
         res = super(HrLeave, self).action_refuse(*args, **kwargs)
         for leave in self:
             leave._send_leave_refuse_email_to_employee()
+            timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', '=', leave.id)])
+            if timesheets:
+                timesheets.with_context(leave_unlink=True).sudo().unlink()
         return res
+
+    def write(self, vals):
+        res = super(HrLeave, self).write(vals)
+        if 'state' in vals:
+            if vals['state'] in ['validate', 'validate1']:
+                timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', 'in', self.ids)])
+                if timesheets:
+                    timesheets.write({'state': 'approved'})
+            elif vals['state'] in ['refuse', 'cancel', 'draft']:
+                timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', 'in', self.ids)])
+                if timesheets:
+                    timesheets.with_context(leave_unlink=True).sudo().unlink()
+        return res
+
+    def unlink(self):
+        timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', 'in', self.ids)])
+        if timesheets:
+            timesheets.with_context(leave_unlink=True).sudo().unlink()
+        return super(HrLeave, self).unlink()
 
     @api.model
     def _cron_auto_approve_past_leaves(self):

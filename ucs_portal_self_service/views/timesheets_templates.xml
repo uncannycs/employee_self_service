@@ -29,6 +29,65 @@
                 </div>
             </div>
 
+            <!-- Weekly Timesheet Progress Widget -->
+            <t t-if="weekly_target_hours">
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;">
+                    <div class="card-body p-4">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="background-color: #f3e8ff; color: #4a148c; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                    <i class="fa fa-calendar-check-o"/>
+                                </div>
+                                <div>
+                                    <h6 class="font-weight-bold text-dark mb-1" style="font-size: 1.05rem;">
+                                        Weekly Timesheet Progress
+                                    </h6>
+                                    <span class="text-muted small">
+                                        Schedule: <strong class="text-dark"><t t-esc="weekly_calendar_name"/></strong>
+                                        (<t t-esc="week_start_date"/> - <t t-esc="week_end_date"/>)
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <t t-if="weekly_logged_hours >= weekly_target_hours">
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #dcfce7; color: #15803d; font-size: 0.85rem; font-weight: 600;">
+                                        <i class="fa fa-check-circle me-1"/> Weekly Target Completed!
+                                    </span>
+                                </t>
+                                <t t-else="">
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #f3e8ff; color: #6b21a8; font-size: 0.85rem; font-weight: 600;">
+                                        <i class="fa fa-clock-o me-1"/> <t t-esc="weekly_remaining_hours_str"/> Remaining
+                                    </span>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="progress mb-3" style="height: 12px; border-radius: 10px; background-color: #f1f5f9;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                 t-att-style="'width: ' + str(weekly_progress_pct) + '%; background-color: ' + ('#22c55e' if weekly_logged_hours >= weekly_target_hours else '#4a148c') + '; border-radius: 10px;'" 
+                                 t-att-aria-valuenow="weekly_progress_pct" aria-valuemin="0" aria-valuemax="100"/>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="row text-center pt-2">
+                            <div class="col-4 border-end">
+                                <span class="text-muted small d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">TARGET / WEEK</span>
+                                <h5 class="font-weight-bold text-dark mb-0 mt-1" style="font-size: 1.2rem;"><t t-esc="weekly_target_hours_str"/> <small class="text-muted" style="font-size: 0.75rem;">Hrs</small></h5>
+                            </div>
+                            <div class="col-4 border-end">
+                                <span class="text-muted small d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">LOGGED THIS WEEK</span>
+                                <h5 class="font-weight-bold text-primary mb-0 mt-1" style="font-size: 1.2rem; color: #4a148c !important;"><t t-esc="weekly_logged_hours_str"/> <small class="text-muted" style="font-size: 0.75rem;">Hrs</small></h5>
+                            </div>
+                            <div class="col-4">
+                                <span class="text-muted small d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">COMPLETED</span>
+                                <h5 class="font-weight-bold text-success mb-0 mt-1" style="font-size: 1.2rem;"><t t-esc="weekly_progress_pct"/>%</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+
             <!-- Global Error Toast -->
             <t t-if="error_message">
                 <div class="position-fixed" style="z-index: 1055; right: 20px; top: 20px;">
@@ -59,17 +118,17 @@
             </t>
 
             <div class="ess-hist-body">
-                <!-- Manager Nav Tabs: MY TIMESHEETS vs ALL TIMESHEETS (Exact match to Approvals menu) -->
-                <t t-if="is_timesheet_manager">
-                    <div class="ess-sub-nav bg-white shadow-sm border-bottom mb-4" style="padding: 0 20px; display: flex; overflow-x: auto; white-space: nowrap; border-radius: 8px;">
-                        <ul class="nav" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; width: 100%;">
-                            <li class="nav-item" role="presentation">
-                                <a t-attf-href="/my/timesheets?scope=my{{ ('&amp;groupby=' + groupby) if groupby != 'none' else '' }}{{ ('&amp;filterby=' + filterby) if filterby and filterby != 'all' else '' }}{{ ('&amp;search=' + search) if search else '' }}" 
-                                   t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope != 'all' else '' }}" 
-                                   t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope != 'all' else 'transparent') + '; opacity: ' + ('1' if scope != 'all' else '0.6') + ';'">
-                                    MY TIMESHEETS
-                                </a>
-                            </li>
+                <!-- Nav Tabs & View Switcher Row -->
+                <div class="ess-sub-nav bg-white shadow-sm border-bottom mb-4 d-flex align-items-center justify-content-between px-3" style="border-radius: 8px;">
+                    <ul class="nav" role="tablist" style="margin: 0; padding: 0; border: none; display: flex; align-items: center;">
+                        <li class="nav-item" role="presentation">
+                            <a t-attf-href="/my/timesheets?scope=my{{ ('&amp;groupby=' + groupby) if groupby != 'none' else '' }}{{ ('&amp;filterby=' + filterby) if filterby and filterby != 'all' else '' }}{{ ('&amp;search=' + search) if search else '' }}" 
+                               t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope != 'all' else '' }}" 
+                               t-att-style="'background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 3px solid ' + ('#4c1d95' if scope != 'all' else 'transparent') + '; opacity: ' + ('1' if scope != 'all' else '0.6') + ';'">
+                                MY TIMESHEETS
+                            </a>
+                        </li>
+                        <t t-if="is_timesheet_manager">
                             <li class="nav-item" role="presentation">
                                 <a t-attf-href="/my/timesheets?scope=all{{ ('&amp;groupby=' + groupby) if groupby != 'none' else '' }}{{ ('&amp;filterby=' + filterby) if filterby and filterby != 'all' else '' }}{{ ('&amp;search=' + search) if search else '' }}" 
                                    t-attf-class="ess-sub-nav-item nav-link {{ 'active' if scope == 'all' else '' }}" 
@@ -77,11 +136,23 @@
                                     ALL TIMESHEETS
                                 </a>
                             </li>
-                        </ul>
-                    </div>
-                </t>
+                        </t>
+                    </ul>
 
-                <div class="ess-hist-table-wrap">
+                    <!-- Right Side View Switcher (List / Calendar) -->
+                    <div class="d-flex align-items-center gap-2 ms-auto py-2">
+                        <button type="button" id="btn_view_list" class="btn btn-sm shadow-sm me-2" style="background: #4a148c; color: white; border-radius: 6px; font-weight: 600; font-size: 0.8rem; padding: 6px 14px;" onclick="switchTimesheetView('list')">
+                            <i class="fa fa-list me-1"/> List
+                        </button>
+                        <button type="button" id="btn_view_calendar" class="btn btn-sm" style="background: #f1f5f9; color: #4c1d95; border-radius: 6px; font-weight: 600; font-size: 0.8rem; padding: 6px 14px;" onclick="switchTimesheetView('calendar')">
+                            <i class="fa fa-calendar me-1"/> Calendar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List View Container -->
+                <div id="timesheet_list_container">
+                    <div class="ess-hist-table-wrap">
                     <table class="ess-hist-table">
                         <thead>
                             <tr>
@@ -161,58 +232,60 @@
                                                 </t>
                                             </td>
                                             <td class="text-end" style="min-width: 140px;">
-                                                <t t-if="ts.state != 'approved'">
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" t-attf-onclick="document.getElementById('ts_display_{{ ts.id }}').style.display='none'; var er = document.getElementById('ts_edit_{{ ts.id }}'); er.classList.remove('d-none'); er.style.display='table-row';" title="Edit Inline">
-                                                        <i class="fa fa-pencil"></i>
-                                                    </button>
-                                                </t>
-                                                <t t-if="ts.state == 'draft'">
-                                                    <a t-attf-href="/my/timesheets/submit/{{ ts.id }}" class="btn btn-sm btn-primary" title="Submit">
-                                                        <i class="fa fa-paper-plane"></i> Submit
-                                                    </a>
-                                                </t>
-                                                <t t-if="ts.state == 'confirm' and is_timesheet_manager and (not ts.employee_id or not ts.employee_id.user_id or ts.employee_id.user_id.id != request.env.user.id) and (not ts.user_id or ts.user_id.id != request.env.user.id)">
-                                                    <a t-attf-href="/my/timesheets/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">
-                                                        <i class="fa fa-check"></i> Approve
-                                                    </a>
-                                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" t-attf-data-bs-target="#refuseModal_{{ ts.id }}" title="Refuse">
-                                                        <i class="fa fa-times"></i>
-                                                    </button>
+                                                <t t-if="not ts.holiday_id">
+                                                    <t t-if="ts.state != 'approved'">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" t-attf-onclick="document.getElementById('ts_display_{{ ts.id }}').style.display='none'; var er = document.getElementById('ts_edit_{{ ts.id }}'); er.classList.remove('d-none'); er.style.display='table-row';" title="Edit Inline">
+                                                            <i class="fa fa-pencil"></i>
+                                                        </button>
+                                                    </t>
+                                                    <t t-if="ts.state == 'draft'">
+                                                        <a t-attf-href="/my/timesheets/submit/{{ ts.id }}" class="btn btn-sm btn-primary" title="Submit">
+                                                            <i class="fa fa-paper-plane"></i> Submit
+                                                        </a>
+                                                    </t>
+                                                    <t t-if="ts.state == 'confirm' and is_timesheet_manager and (not ts.employee_id or not ts.employee_id.user_id or ts.employee_id.user_id.id != request.env.user.id) and (not ts.user_id or ts.user_id.id != request.env.user.id)">
+                                                        <a t-attf-href="/my/timesheets/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">
+                                                            <i class="fa fa-check"></i> Approve
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" t-attf-data-bs-target="#refuseModal_{{ ts.id }}" title="Refuse">
+                                                            <i class="fa fa-times"></i>
+                                                        </button>
 
-                                                    <!-- Refuse Modal -->
-                                                    <div class="modal fade" t-attf-id="refuseModal_{{ ts.id }}" tabindex="-1" role="dialog" aria-hidden="true">
-                                                        <div class="modal-dialog modal-dialog-centered" role="document">
-                                                            <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
-                                                                <form action="/my/timesheets/refuse" method="post">
-                                                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                                                    <input type="hidden" name="line_id" t-att-value="ts.id"/>
-                                                                    <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
-                                                                        <h5 class="modal-title font-weight-bold text-dark">Refuse Timesheet</h5>
-                                                                        <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
-                                                                            <span aria-hidden="true">&amp;times;</span>
-                                                                        </button>
-                                                                    </div>
-                                                                    <div class="modal-body px-4 pt-3 text-start">
-                                                                        <p class="text-muted small">Please specify reason for refusing this timesheet line.</p>
-                                                                        <div class="form-group mb-3">
-                                                                            <label class="text-muted small font-weight-bold">Reason</label>
-                                                                            <textarea class="form-control" name="reason" required="1" rows="3" placeholder="Enter reason for refusal..."></textarea>
+                                                        <!-- Refuse Modal -->
+                                                        <div class="modal fade" t-attf-id="refuseModal_{{ ts.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                                                <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                                                                    <form action="/my/timesheets/refuse" method="post">
+                                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                                        <input type="hidden" name="line_id" t-att-value="ts.id"/>
+                                                                        <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                                                            <h5 class="modal-title font-weight-bold text-dark">Refuse Timesheet</h5>
+                                                                            <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                                                                <span aria-hidden="true">&amp;times;</span>
+                                                                            </button>
                                                                         </div>
-                                                                    </div>
-                                                                    <div class="modal-footer bg-white border-top-0 px-4 pb-4">
-                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                        <button type="submit" class="btn btn-danger">Refuse Timesheet</button>
-                                                                    </div>
-                                                                </form>
+                                                                        <div class="modal-body px-4 pt-3 text-start">
+                                                                            <p class="text-muted small">Please specify reason for refusing this timesheet line.</p>
+                                                                            <div class="form-group mb-3">
+                                                                                <label class="text-muted small font-weight-bold">Reason</label>
+                                                                                <textarea class="form-control" name="reason" required="1" rows="3" placeholder="Enter reason for refusal..."></textarea>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                            <button type="submit" class="btn btn-danger">Confirm Refusal</button>
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    </t>
                                                 </t>
                                             </td>
                                         </tr>
 
                                         <!-- Edit Row -->
-                                        <t t-if="ts.state != 'approved'">
+                                        <t t-if="not ts.holiday_id and ts.state != 'approved'">
                                             <tr t-attf-id="ts_edit_{{ ts.id }}"
                                                 t-attf-class="ts-group-child {{ row['parent_class'] }} d-none bg-light" style="display: none !important;">
                                                 <td>
@@ -254,9 +327,439 @@
                         </tbody>
                     </table>
                 </div>
+                </div>
+
+                <!-- Calendar View Container -->
+                <div id="timesheet_calendar_container" style="display: none;">
+                    <!-- Monthly Summary Progress Card -->
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-left: 5px solid #4a148c !important;">
+                        <div class="card-body p-3">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 46px; height: 46px; background: #f3e8ff; color: #4a148c; font-size: 1.2rem;">
+                                        <i class="fa fa-calendar-check-o"/>
+                                    </div>
+                                    <div>
+                                        <h6 class="font-weight-bold text-dark mb-0" id="summary_emp_month_title">
+                                            <t t-esc="calendar_data.get('employee_name', '') if calendar_data else ''"/> - <t t-esc="calendar_data.get('month_name', '') if calendar_data else ''"/> Summary
+                                        </h6>
+                                        <small class="text-muted">Monthly Working Hours Progress &amp; Breakdown</small>
+                                    </div>
+                                </div>
+
+                                <!-- Metrics Grid -->
+                                <div class="d-flex flex-wrap align-items-center gap-4 text-center">
+                                    <div class="px-3 border-end">
+                                        <small class="text-muted font-weight-bold d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">Schedule (Month)</small>
+                                        <span class="h6 font-weight-bold text-dark mb-0" id="sum_req_hrs">
+                                            <t t-set="req_val" t-value="calendar_data.get('monthly_required_hours', 0) if calendar_data else 0"/>
+                                            <t t-esc="str(int(req_val)).zfill(2) + ':' + str(int(round((req_val - int(req_val)) * 60))).zfill(2)"/> Hrs
+                                        </span>
+                                    </div>
+                                    <div class="px-3 border-end">
+                                        <small class="text-muted font-weight-bold d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">Time Off</small>
+                                        <span class="h6 font-weight-bold text-warning mb-0" id="sum_leave_hrs">
+                                            <t t-set="lve_val" t-value="calendar_data.get('monthly_leave_hours', 0) if calendar_data else 0"/>
+                                            <t t-esc="str(int(lve_val)).zfill(2) + ':' + str(int(round((lve_val - int(lve_val)) * 60))).zfill(2)"/> Hrs
+                                        </span>
+                                    </div>
+                                    <div class="px-3 border-end">
+                                        <small class="text-muted font-weight-bold d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">Net Required Work</small>
+                                        <span class="h6 font-weight-bold text-dark mb-0" id="sum_net_req_hrs">
+                                            <t t-set="net_val" t-value="calendar_data.get('monthly_net_required', 0) if calendar_data else 0"/>
+                                            <t t-esc="str(int(net_val)).zfill(2) + ':' + str(int(round((net_val - int(net_val)) * 60))).zfill(2)"/> Hrs
+                                        </span>
+                                    </div>
+                                    <div class="px-3 border-end">
+                                        <small class="text-muted font-weight-bold d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">Work Logged</small>
+                                        <span class="h6 font-weight-bold text-primary mb-0" id="sum_logged_hrs">
+                                            <t t-set="log_val" t-value="calendar_data.get('monthly_regular_hours', 0) if calendar_data else 0"/>
+                                            <t t-esc="str(int(log_val)).zfill(2) + ':' + str(int(round((log_val - int(log_val)) * 60))).zfill(2)"/> Hrs
+                                        </span>
+                                    </div>
+                                    <div class="px-3">
+                                        <small class="text-muted font-weight-bold d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">Work Completion</small>
+                                        <span class="h6 font-weight-bold text-success mb-0" id="sum_comp_pct">
+                                            <t t-esc="calendar_data.get('monthly_completion_pct', 0) if calendar_data else '0'"/>%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: #ffffff;">
+                        <div class="card-body p-4">
+                            
+                            <!-- Calendar Navigation Header -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 pb-3 border-bottom gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-circle px-2 py-1" onclick="navCalendarMonth('prev')" title="Previous Month">
+                                        <i class="fa fa-chevron-left"/>
+                                    </button>
+                                    <h5 id="cal_month_title" class="font-weight-bold text-dark mb-0 mx-2" style="min-width: 160px; text-align: center;">
+                                        <t t-esc="calendar_data.get('month_name', 'Calendar') if calendar_data else 'Calendar'"/>
+                                    </h5>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-circle px-2 py-1" onclick="navCalendarMonth('next')" title="Next Month">
+                                        <i class="fa fa-chevron-right"/>
+                                    </button>
+
+                                    <!-- Manager Employee Selection Dropdown -->
+                                    <t t-if="is_timesheet_manager and calendar_data and calendar_data.get('employees')">
+                                        <div class="ms-3">
+                                            <select id="cal_employee_select" class="form-select form-select-sm border-secondary font-weight-bold text-dark" style="min-width: 180px; border-radius: 6px;" onchange="onCalendarEmployeeChange(this.value)">
+                                                <t t-foreach="calendar_data.get('employees', [])" t-as="emp">
+                                                    <option t-att-value="emp['id']" t-att-selected="emp['id'] == calendar_data.get('employee_id')">
+                                                        <t t-esc="emp['name']"/>
+                                                    </option>
+                                                </t>
+                                            </select>
+                                        </div>
+                                    </t>
+                                </div>
+
+                                <!-- Calendar Legend -->
+                                <div class="d-flex flex-wrap align-items-center gap-3" style="font-size: 0.78rem;">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span style="width: 14px; height: 14px; border-radius: 4px; background: #dcfce7; border: 1px solid #22c55e; display: inline-block;"></span>
+                                        <span class="text-muted">Complete</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span style="width: 14px; height: 14px; border-radius: 4px; background: #fee2e2; border: 1px solid #ef4444; display: inline-block;"></span>
+                                        <span class="text-muted">Incomplete</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span style="width: 14px; height: 14px; border-radius: 4px; background: #fef9c3; border: 1px solid #eab308; display: inline-block;"></span>
+                                        <span class="text-muted">Full Day Leave</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span style="width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(to bottom, #fef9c3 50%, #dcfce7 50%); border: 1px solid #22c55e; display: inline-block;"></span>
+                                        <span class="text-muted">1st Half Leave + Work</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span style="width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(to bottom, #dcfce7 50%, #fef9c3 50%); border: 1px solid #22c55e; display: inline-block;"></span>
+                                        <span class="text-muted">2nd Half Leave + Work</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Calendar Grid Table -->
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle mb-0" style="border-color: #f1f5f9; table-layout: fixed;">
+                                    <thead style="background: #f8fafc; font-size: 0.82rem; text-transform: uppercase; color: #64748b;">
+                                        <tr>
+                                            <th class="py-2" style="width: 14.28%;">Mon</th>
+                                            <th class="py-2" style="width: 14.28%;">Tue</th>
+                                            <th class="py-2" style="width: 14.28%;">Wed</th>
+                                            <th class="py-2" style="width: 14.28%;">Thu</th>
+                                            <th class="py-2" style="width: 14.28%;">Fri</th>
+                                            <th class="py-2" style="width: 14.28%;">Sat</th>
+                                            <th class="py-2" style="width: 14.28%;">Sun</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cal_grid_body">
+                                        <!-- Dynamic Calendar Cells rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day Entries Details Modal -->
+                <div class="modal fade" id="dayDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content border-0 shadow" style="border-radius: 12px; background: #ffffff;">
+                            <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                <h5 class="modal-title font-weight-bold text-dark" id="dayModalTitle">Timesheet Details</h5>
+                                <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                    <span aria-hidden="true">&amp;times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body px-4 pt-3 pb-4">
+                                <div id="dayModalContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <script type="text/javascript">
+                var currentCalData = <t t-raw="json.dumps(calendar_data or {})"/>;
+
+                function switchTimesheetView(view) {
+                    var listCont = document.getElementById('timesheet_list_container');
+                    var calCont = document.getElementById('timesheet_calendar_container');
+                    var btnList = document.getElementById('btn_view_list');
+                    var btnCal = document.getElementById('btn_view_calendar');
+
+                    if (view === 'calendar') {
+                        if (listCont) listCont.style.display = 'none';
+                        if (calCont) calCont.style.display = 'block';
+                        if (btnList) {
+                            btnList.style.background = '#f1f5f9';
+                            btnList.style.color = '#4c1d95';
+                        }
+                        if (btnCal) {
+                            btnCal.style.background = '#4a148c';
+                            btnCal.style.color = '#ffffff';
+                        }
+                        renderCalendarGrid(currentCalData);
+                    } else {
+                        if (calCont) calCont.style.display = 'none';
+                        if (listCont) listCont.style.display = 'block';
+                        if (btnCal) {
+                            btnCal.style.background = '#f1f5f9';
+                            btnCal.style.color = '#4c1d95';
+                        }
+                        if (btnList) {
+                            btnList.style.background = '#4a148c';
+                            btnList.style.color = '#ffffff';
+                        }
+                    }
+                }
+
+                var selectedEmployeeId = currentCalData ? currentCalData.employee_id : null;
+
+                function onCalendarEmployeeChange(empId) {
+                    selectedEmployeeId = empId;
+                    var targetYear = currentCalData ? currentCalData.year : null;
+                    var targetMonth = currentCalData ? currentCalData.month : null;
+                    fetchCalendarData(targetYear, targetMonth, empId);
+                }
+
+                function navCalendarMonth(dir) {
+                    if (!currentCalData) return;
+                    var targetYear = (dir === 'prev') ? currentCalData.prev_year : currentCalData.next_year;
+                    var targetMonth = (dir === 'prev') ? currentCalData.prev_month : currentCalData.next_month;
+                    fetchCalendarData(targetYear, targetMonth, selectedEmployeeId);
+                }
+
+                function updateSummaryCard(data) {
+                    if (!data) return;
+                    function fmtHrs(val) {
+                        var v = val || 0;
+                        var h = Math.floor(v);
+                        var m = Math.round((v - h) * 60);
+                        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                    }
+                    
+                    var titleEl = document.getElementById('summary_emp_month_title');
+                    if (titleEl) titleEl.innerText = (data.employee_name || '') + ' - ' + (data.month_name || '') + ' Summary';
+
+                    var reqEl = document.getElementById('sum_req_hrs');
+                    if (reqEl) reqEl.innerText = fmtHrs(data.monthly_required_hours) + ' Hrs';
+
+                    var lveEl = document.getElementById('sum_leave_hrs');
+                    if (lveEl) lveEl.innerText = fmtHrs(data.monthly_leave_hours) + ' Hrs';
+
+                    var netEl = document.getElementById('sum_net_req_hrs');
+                    if (netEl) netEl.innerText = fmtHrs(data.monthly_net_required) + ' Hrs';
+
+                    var logEl = document.getElementById('sum_logged_hrs');
+                    if (logEl) logEl.innerText = fmtHrs(data.monthly_regular_hours) + ' Hrs';
+
+                    var pctEl = document.getElementById('sum_comp_pct');
+                    if (pctEl) pctEl.innerText = (data.monthly_completion_pct || 0) + '%';
+                }
+
+                function fetchCalendarData(year, month, empId) {
+                    fetch('/my/timesheets/calendar_data', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'call',
+                            params: {
+                                year: year,
+                                month: month,
+                                employee_id: empId
+                            }
+                        })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        if (data &amp;&amp; data.result) {
+                            currentCalData = data.result;
+                            selectedEmployeeId = currentCalData.employee_id;
+                            var monthTitle = document.getElementById('cal_month_title');
+                            if (monthTitle) monthTitle.innerText = currentCalData.month_name;
+                            
+                            var empSelect = document.getElementById('cal_employee_select');
+                            if (empSelect &amp;&amp; selectedEmployeeId) {
+                                empSelect.value = selectedEmployeeId;
+                            }
+                            
+                            updateSummaryCard(currentCalData);
+                            renderCalendarGrid(currentCalData);
+                        }
+                    })
+                    .catch(function(err) { console.error("Calendar fetch error:", err); });
+                }
+
+                function renderCalendarGrid(data) {
+                    var tbody = document.getElementById('cal_grid_body');
+                    if (!tbody || !data || !data.days_data) return;
+
+                    tbody.innerHTML = '';
+                    var firstWeekday = data.first_weekday;
+                    var numDays = data.num_days;
+                    var daysData = data.days_data;
+
+                    var dayCounter = 1;
+                    var totalCells = firstWeekday + numDays;
+                    var totalRows = Math.ceil(totalCells / 7);
+
+                    for (var r = 0; r &lt; totalRows; r++) {
+                        var tr = document.createElement('tr');
+                        for (var c = 0; c &lt; 7; c++) {
+                            var cellIndex = r * 7 + c;
+                            var td = document.createElement('td');
+                            td.style.height = '90px';
+                            td.style.verticalAlign = 'top';
+                            td.style.padding = '6px';
+                            td.style.position = 'relative';
+
+                            if (cellIndex &gt;= firstWeekday &amp;&amp; dayCounter &lt;= numDays) {
+                                var dayStr = data.year + '-' + String(data.month).padStart(2, '0') + '-' + String(dayCounter).padStart(2, '0');
+                                var dInfo = daysData[dayStr] || {};
+                                
+                                td.style.cursor = 'pointer';
+                                td.setAttribute('data-day-str', dayStr);
+
+                                var bgStyle = '#ffffff';
+                                var borderStyle = '1px solid #e2e8f0';
+                                var textStyle = '#334155';
+
+                                switch(dInfo.status_code) {
+                                    case 'green':
+                                        bgStyle = '#dcfce7';
+                                        borderStyle = '2px solid #22c55e';
+                                        textStyle = '#15803d';
+                                        break;
+                                    case 'red':
+                                        bgStyle = '#fee2e2';
+                                        borderStyle = '2px solid #ef4444';
+                                        textStyle = '#b91c1c';
+                                        break;
+                                    case 'yellow':
+                                        bgStyle = '#fef9c3';
+                                        borderStyle = '2px solid #eab308';
+                                        textStyle = '#a16207';
+                                        break;
+                                    case 'yellow_top_green_bottom':
+                                        bgStyle = 'linear-gradient(to bottom, #fef9c3 50%, #dcfce7 50%)';
+                                        borderStyle = '2px solid #22c55e';
+                                        textStyle = '#15803d';
+                                        break;
+                                    case 'yellow_top_red_bottom':
+                                        bgStyle = 'linear-gradient(to bottom, #fef9c3 50%, #fee2e2 50%)';
+                                        borderStyle = '2px solid #ef4444';
+                                        textStyle = '#b91c1c';
+                                        break;
+                                    case 'green_top_yellow_bottom':
+                                        bgStyle = 'linear-gradient(to bottom, #dcfce7 50%, #fef9c3 50%)';
+                                        borderStyle = '2px solid #22c55e';
+                                        textStyle = '#15803d';
+                                        break;
+                                    case 'red_top_yellow_bottom':
+                                        bgStyle = 'linear-gradient(to bottom, #fee2e2 50%, #fef9c3 50%)';
+                                        borderStyle = '2px solid #ef4444';
+                                        textStyle = '#b91c1c';
+                                        break;
+                                    default:
+                                        bgStyle = '#f8fafc';
+                                        borderStyle = '1px solid #f1f5f9';
+                                        textStyle = '#94a3b8';
+                                }
+
+                                td.style.background = bgStyle;
+                                td.style.border = borderStyle;
+                                td.style.borderRadius = '8px';
+
+                                function fmtHrs(val) {
+                                    var h = Math.floor(val);
+                                    var m = Math.round((val - h) * 60);
+                                    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                                }
+
+                                var cellHtml = '&lt;div class="d-flex justify-content-between align-items-center mb-1"&gt;';
+                                cellHtml += '&lt;span style="font-weight: 700; font-size: 0.9rem; color: ' + textStyle + ';"&gt;' + dayCounter + '&lt;/span&gt;';
+                                if (dInfo.scheduled_hours &gt; 0 || dInfo.total_hours &gt; 0) {
+                                    cellHtml += '&lt;span class="badge" style="font-size: 0.7rem; background: rgba(255,255,255,0.85); color: #1e293b; border: 1px solid rgba(0,0,0,0.1); font-weight: 600;"&gt;' + fmtHrs(dInfo.total_hours) + ' / ' + fmtHrs(dInfo.scheduled_hours) + 'h&lt;/span&gt;';
+                                }
+                                cellHtml += '&lt;/div&gt;';
+
+                                if (dInfo.entries &amp;&amp; dInfo.entries.length &gt; 0) {
+                                    cellHtml += '&lt;div style="font-size: 0.72rem; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"&gt;';
+                                    dInfo.entries.forEach(function(ent) {
+                                        cellHtml += '&lt;div class="text-truncate" style="margin-bottom: 2px;"&gt;• ' + (ent.task || ent.project || ent.name) + ' (' + fmtHrs(ent.hours) + 'h)&lt;/div&gt;';
+                                    });
+                                    cellHtml += '&lt;/div&gt;';
+                                }
+
+                                td.innerHTML = cellHtml;
+
+                                (function(info) {
+                                    td.addEventListener('click', function() {
+                                        showDayDetailsModal(info);
+                                    });
+                                })(dInfo);
+
+                                dayCounter++;
+                            } else {
+                                td.style.background = '#f8fafc';
+                                td.style.border = '1px solid #f1f5f9';
+                                td.style.opacity = '0.4';
+                            }
+                            tr.appendChild(td);
+                        }
+                        tbody.appendChild(tr);
+                    }
+                }
+
+                function showDayDetailsModal(info) {
+                    if (!info) return;
+                    var titleEl = document.getElementById('dayModalTitle');
+                    var contentEl = document.getElementById('dayModalContent');
+                    if (titleEl) titleEl.innerText = 'Timesheets for ' + info.date;
+
+                    function fmtHrs(val) {
+                        var h = Math.floor(val);
+                        var m = Math.round((val - h) * 60);
+                        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+                    }
+
+                    var html = '&lt;div class="mb-3 d-flex justify-content-between align-items-center p-2 rounded" style="background: #f1f5f9; font-size: 0.85rem;"&gt;';
+                    html += '&lt;span&gt;Scheduled: &lt;strong&gt;' + fmtHrs(info.scheduled_hours) + ' Hrs&lt;/strong&gt;&lt;/span&gt;';
+                    html += '&lt;span&gt;Logged: &lt;strong&gt;' + fmtHrs(info.total_hours) + ' Hrs&lt;/strong&gt;&lt;/span&gt;';
+                    html += '&lt;/div&gt;';
+
+                    if (!info.entries || info.entries.length === 0) {
+                        html += '&lt;p class="text-muted text-center py-3"&gt;No timesheet entries logged for this date.&lt;/p&gt;';
+                    } else {
+                        html += '&lt;div class="table-responsive"&gt;&lt;table class="table table-sm table-hover mb-0" style="font-size: 0.85rem;"&gt;';
+                        html += '&lt;thead style="background: #f8fafc;"&gt;&lt;tr&gt;&lt;th&gt;Description&lt;/th&gt;&lt;th&gt;Project&lt;/th&gt;&lt;th&gt;Task&lt;/th&gt;&lt;th class="text-end"&gt;Hours&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;';
+                        info.entries.forEach(function(e) {
+                            html += '&lt;tr&gt;';
+                            html += '&lt;td&gt;' + (e.name || '-') + (e.is_leave ? ' &lt;span class="badge bg-warning text-dark ms-1"&gt;Time Off&lt;/span&gt;' : '') + '&lt;/td&gt;';
+                            html += '&lt;td&gt;&lt;span class="badge bg-light text-dark"&gt;' + (e.project || '-') + '&lt;/span&gt;&lt;/td&gt;';
+                            html += '&lt;td&gt;' + (e.task || '-') + '&lt;/td&gt;';
+                            html += '&lt;td class="text-end font-weight-bold"&gt;' + fmtHrs(e.hours) + '&lt;/td&gt;';
+                            html += '&lt;/tr&gt;';
+                        });
+                        html += '&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;';
+                    }
+
+                    if (contentEl) contentEl.innerHTML = html;
+                    var modalEl = document.getElementById('dayDetailsModal');
+                    if (modalEl) {
+                        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        modal.show();
+                    }
+                }
+
                 document.addEventListener('DOMContentLoaded', function() {
                     document.addEventListener('click', function(e) {
                         var headerRow = e.target.closest('.ts-group-header-row');
