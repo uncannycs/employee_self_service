@@ -17,6 +17,7 @@
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
         'data/ir_cron_data.xml',
+        'data/mail_template_data.xml',
         'views/attendance_regularize_views.xml',
         'views/hr_employee_views.xml',
         'views/res_config_settings_views.xml',

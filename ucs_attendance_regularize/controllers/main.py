@@ -3,6 +3,7 @@ from odoo import http
 from odoo.http import request
 from datetime import datetime
 import pytz
+import urllib.parse
 
 class AttendanceRegularizeController(http.Controller):
 
@@ -10,78 +11,94 @@ class AttendanceRegularizeController(http.Controller):
     def submit_regularize_request(self, **post):
         user = request.env.user
         employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
-        
+
         if not employee:
             return request.redirect('/my/attendance/history')
-            
-        attendance_id = post.get('attendance_id')
+
+        attendance_id_str = post.get('attendance_id')
         regularize_type = post.get('regularize_type')
         reason = post.get('reason')
-        
-        check_in_old_str = post.get('check_in_old') # Format: DD/MM/YYYY HH:MM
-        check_out_old_str = post.get('check_out_old') # Format: DD/MM/YYYY HH:MM or 'Ongoing'
-        
+
         check_in_new_time = post.get('check_in_new') # Format: HH:MM
         check_out_new_time = post.get('check_out_new') # Format: HH:MM
-        
+
+        if not attendance_id_str or not attendance_id_str.isdigit():
+            return request.redirect('/my/attendance/history')
+  
+        attendance_id = int(attendance_id_str)
+        attendance = request.env['hr.attendance'].sudo().search([('id', '=', attendance_id), ('employee_id', '=', employee.id)], limit=1)
+
+        if not attendance:
+            return request.redirect('/my/attendance/history?error=' + urllib.parse.quote("Invalid attendance record."))
+
         user_tz = pytz.timezone(user.tz or 'UTC')
-        
-        def parse_local_to_utc(date_str, time_str):
-            if not date_str or not time_str:
+
+        def combine_utc_date_with_local_time(utc_dt, time_str):
+            if not utc_dt or not time_str:
                 return False
-            # date_str is expected to be from the old time like "DD/MM/YYYY HH:MM"
-            # We only need "DD/MM/YYYY"
-            try:
-                date_part = date_str.split(' ')[0]
-                dt_str = f"{date_part} {time_str}"
-                local_dt = datetime.strptime(dt_str, '%d/%m/%Y %H:%M')
-                local_dt = user_tz.localize(local_dt)
-                utc_dt = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
-                return utc_dt
-            except Exception as e:
+            if ":" not in time_str:
                 return False
-                
-        def parse_old_to_utc(dt_str):
-            if not dt_str or dt_str == 'Ongoing':
+
+            parts = time_str.split(':')
+            if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
                 return False
-            try:
-                local_dt = datetime.strptime(dt_str, '%d/%m/%Y %I:%M %p')
-                local_dt = user_tz.localize(local_dt)
-                utc_dt = local_dt.astimezone(pytz.utc).replace(tzinfo=None)
-                return utc_dt
-            except Exception as e:
-                return False
+
+            hour = int(parts[0])
+            minute = int(parts[1])
+
+            utc_dt_aware = pytz.utc.localize(utc_dt)
+            local_dt = utc_dt_aware.astimezone(user_tz)
+
+            new_local_dt = local_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+            return new_local_dt.astimezone(pytz.utc).replace(tzinfo=None)
 
         vals = {
             'employee_id': employee.id,
+            'attendance_id': attendance.id,
             'regularize_type': regularize_type,
             'reason': reason,
             'state': 'submit',
+            'check_in_old': attendance.check_in,
+            'check_out_old': attendance.check_out,
         }
-        
-        # Check quota
+
         if employee.regularize_req_used >= employee.regularize_request_assign:
-            import urllib.parse
             return request.redirect('/my/attendance/history?error=' + urllib.parse.quote("You have exhausted your monthly regularization requests limit."))
-        
-        if attendance_id:
-            vals['attendance_id'] = int(attendance_id)
-            
-        vals['check_in_old'] = parse_old_to_utc(check_in_old_str)
-        vals['check_out_old'] = parse_old_to_utc(check_out_old_str)
-        
+
         if regularize_type == 'check_in' and check_in_new_time:
-            vals['check_in_new'] = parse_local_to_utc(check_in_old_str, check_in_new_time)
-            
+            vals['check_in_new'] = combine_utc_date_with_local_time(attendance.check_in, check_in_new_time)
+            if attendance.check_out and vals['check_in_new'] > attendance.check_out:
+                return request.redirect('/my/attendance/history?error=' + urllib.parse.quote("Check-In time cannot be after Check-Out time."))
+            last_att = request.env['hr.attendance'].sudo().search([
+                ('employee_id', '=', employee.id),
+                ('check_in', '<', attendance.check_in),
+                ('id', '!=', attendance.id)
+            ], order='check_in desc', limit=1)
+            if last_att and last_att.check_out and vals['check_in_new'] < last_att.check_out:
+                return request.redirect('/my/attendance/history?error=' + urllib.parse.quote("The requested Check-In time overlaps with your previous attendance."))
+
         if regularize_type == 'check_out' and check_out_new_time:
-            # If it's ongoing, we might not have a check_out date, so fallback to check_in date
-            base_date_str = check_out_old_str if check_out_old_str and check_out_old_str != 'Ongoing' else check_in_old_str
-            vals['check_out_new'] = parse_local_to_utc(base_date_str, check_out_new_time)
-            
-        # Create record
-        request.env['attendance.regularize'].sudo().create(vals)
-        
-        # Increment used quota
+
+            base_dt = attendance.check_out if attendance.check_out else attendance.check_in
+            vals['check_out_new'] = combine_utc_date_with_local_time(base_dt, check_out_new_time)
+            if vals['check_out_new'] < attendance.check_in:
+                return request.redirect('/my/attendance/history?error=' + urllib.parse.quote("Check-Out time cannot be before Check-In time."))
+            next_att = request.env['hr.attendance'].sudo().search([
+                ('employee_id', '=', employee.id),
+                ('check_in', '>', attendance.check_in),
+                ('id', '!=', attendance.id)
+            ], order='check_in asc', limit=1)
+            if next_att and vals['check_out_new'] > next_att.check_in:
+                return request.redirect('/my/attendance/history?error=' + urllib.parse.quote("The requested Check-Out time overlaps with your next attendance."))
+
+        reg = request.env['attendance.regularize'].sudo().create(vals)
+
+        if reg.manager_id:
+            template = request.env.ref('ucs_attendance_regularize.email_template_attendance_regularize_submit', raise_if_not_found=False)
+            if template:
+                template.sudo().send_mail(reg.id, force_send=True)
+
         employee.sudo().write({'regularize_req_used': employee.regularize_req_used + 1})
-        
+
         return request.redirect('/my/attendance/history')
