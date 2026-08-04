@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_employee_form_inherit_regularize" model="ir.ui.view">
+        <field name="name">hr.employee.form.inherit.regularize</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='hr_settings']" position="inside">
+                <group name="regularize_group" string="Attendance Regularization">
+                    <field name="regularize_request_assign" readonly="1"/>
+                    <field name="regularize_req_used" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

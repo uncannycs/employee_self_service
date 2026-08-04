@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- List View -->
+    <record id="view_attendance_regularize_list" model="ir.ui.view">
+        <field name="name">attendance.regularize.list</field>
+        <field name="model">attendance.regularize</field>
+        <field name="arch" type="xml">
+            <list string="Attendance Regularizations" create="0" delete="0" edit="0">
+                <field name="name"/>
+                <field name="employee_id"/>
+                <field name="regularize_type"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_attendance_regularize_form" model="ir.ui.view">
+        <field name="name">attendance.regularize.form</field>
+        <field name="model">attendance.regularize</field>
+        <field name="arch" type="xml">
+            <form string="Attendance Regularization" create="0" delete="0" edit="0">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,submit,manager_approve,hr_approve,reject"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="employee_id" readonly="state != 'draft'"/>
+                            <field name="attendance_id" readonly="state != 'draft'"/>
+                            <field name="regularize_type" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Check-In" invisible="regularize_type == 'check_out'">
+                            <div class="d-flex align-items-center w-100" colspan="2">
+                                <div class="d-flex flex-column w-50 pe-2">
+                                    <span class="text-muted fw-bold mb-1" style="font-size: 0.85em;">Current Check-In Time</span>
+                                    <field name="check_in_old" readonly="1" nolabel="1" class="text-center bg-light"/>
+                                </div>
+                                <div class="px-2 mt-3">
+                                    <i class="fa fa-long-arrow-right text-muted"/>
+                                </div>
+                                <div class="d-flex flex-column w-50 ps-2">
+                                    <span class="text-primary fw-bold mb-1" style="font-size: 0.85em;">New Check-In Time</span>
+                                    <field name="check_in_new" nolabel="1" readonly="state != 'draft'"/>
+                                </div>
+                            </div>
+                        </group>
+
+                        <group string="Check-Out" invisible="regularize_type == 'check_in'">
+                            <div class="d-flex align-items-center w-100" colspan="2">
+                                <div class="d-flex flex-column w-50 pe-2">
+                                    <span class="text-muted fw-bold mb-1" style="font-size: 0.85em;">Current Check-Out Time</span>
+                                    <field name="check_out_old" readonly="1" nolabel="1" class="text-center bg-light"/>
+                                </div>
+                                <div class="px-2 mt-3">
+                                    <i class="fa fa-long-arrow-right text-muted"/>
+                                </div>
+                                <div class="d-flex flex-column w-50 ps-2">
+                                    <span class="text-primary fw-bold mb-1" style="font-size: 0.85em;">New Check-Out Time</span>
+                                    <field name="check_out_new" nolabel="1" readonly="state != 'draft'"/>
+                                </div>
+                            </div>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Reason" name="reason_page">
+                            <field name="reason" placeholder="e.g. Forgot to sign out..." readonly="state != 'draft'"/>
+                        </page>
+                        <page string="Information">
+                            <group>
+                                <group>
+                                    <field name="manager_id"/>
+                                    <field name="is_approve_manager" invisible="1"/>
+                                    <field name="manager_approved_time" invisible="not is_approve_manager"/>
+                                </group>
+                                <group>
+                                    <field name="hr_id"/>
+                                    <field name="is_approve_hr" invisible="1"/>
+                                    <field name="hr_approved_time" invisible="not is_approve_hr"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_attendance_regularize_search" model="ir.ui.view">
+        <field name="name">attendance.regularize.search</field>
+        <field name="model">attendance.regularize</field>
+        <field name="arch" type="xml">
+            <search string="Search Regularization">
+                <field name="employee_id"/>
+                <field name="manager_id"/>
+                <field name="hr_id"/>
+                
+                <filter string="Check-In" name="type_check_in" domain="[('regularize_type', '=', 'check_in')]"/>
+                <filter string="Check-Out" name="type_check_out" domain="[('regularize_type', '=', 'check_out')]"/>
+                <separator/>
+                <filter string="Approved" name="state_approved" domain="[('state', 'in', ['manager_approve', 'hr_approve'])]"/>
+                <filter string="Rejected" name="state_rejected" domain="[('state', '=', 'reject')]"/>
+
+                <group>
+                    <filter string="Type" name="group_by_type" context="{'group_by': 'regularize_type'}"/>
+                    <filter string="Employee" name="group_by_employee" context="{'group_by': 'employee_id'}"/>
+                    <filter string="Manager" name="group_by_manager" context="{'group_by': 'manager_id'}"/>
+                    <filter string="HR" name="group_by_hr" context="{'group_by': 'hr_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_attendance_regularize" model="ir.actions.act_window">
+        <field name="name">Regularize</field>
+        <field name="res_model">attendance.regularize</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_attendance_regularize_search"/>
+        <field name="help" type="html">
+          <p class="o_view_nocontent_smiling_face">
+            Create a new Attendance Regularization Request
+          </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_attendance_regularize_root"
+              name="Regularize"
+              parent="hr_attendance.menu_hr_attendance_root"
+              action="action_attendance_regularize"
+              groups="ucs_attendance_regularize.group_attendance_regularize_manager,ucs_attendance_regularize.group_attendance_regularize_admin"
+              sequence="20"/>
+
+</odoo>

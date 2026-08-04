@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="regularize_approvals_tabs" inherit_id="ucs_portal_self_service.approvals_submenu">
+        <xpath expr="." position="inside">
+            <t t-if="request.env.user.has_group('ucs_attendance_regularize.group_attendance_regularize_manager') or request.env.user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin')">
+                <li class="nav-item" role="presentation">
+                    <a href="#regularize" class="ess-sub-nav-item nav-link" t-att-class="'ess-sub-nav-item nav-link ' + ('active' if request.params.get('tab') == 'regularize' else '')" data-bs-toggle="tab" role="tab"
+                       style="background-color: transparent !important; padding: 15px 20px; color: #4c1d95 !important; font-weight: bold; border-bottom: 3px solid transparent; text-decoration: none; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Regularize
+                    </a>
+                </li>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="regularize_approvals_content" inherit_id="ucs_portal_self_service.approvals_content">
+        <xpath expr="." position="inside">
+            <t t-if="request.env.user.has_group('ucs_attendance_regularize.group_attendance_regularize_manager') or request.env.user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin')">
+                <div class="tab-pane fade" t-att-class="'tab-pane fade ' + ('show active' if request.params.get('tab') == 'regularize' else '')" id="regularize" role="tabpanel">
+                    <div class="ess-hist-table-wrap">
+                        <div class="d-flex justify-content-between align-items-center mb-3 px-3 pt-3">
+                            <h4 style="color: var(--ess-primary); margin: 0;"><i class="fa fa-clock-o"/> Pending Regularizations</h4>
+                            <div>
+                                <t t-if="regularize_check_in_count > 0">
+                                    <span class="badge bg-success me-2" style="font-size: 0.9em; padding: 6px 12px; border-radius: 20px;">
+                                        <i class="fa fa-sign-in"/> Check-In: <t t-esc="regularize_check_in_count"/>
+                                    </span>
+                                </t>
+                                <t t-if="regularize_check_out_count > 0">
+                                    <span class="badge bg-danger me-2" style="font-size: 0.9em; padding: 6px 12px; border-radius: 20px;">
+                                        <i class="fa fa-sign-out"/> Check-Out: <t t-esc="regularize_check_out_count"/>
+                                    </span>
+                                </t>
+                                <t t-if="regularize_total_count > 0">
+                                    <span class="badge bg-primary" style="font-size: 0.9em; padding: 6px 12px; border-radius: 20px;">
+                                        Total: <t t-esc="regularize_total_count"/>
+                                    </span>
+                                </t>
+                            </div>
+                        </div>
+                        <table class="ess-hist-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Type</th>
+                                    <th>Date</th>
+                                    <th>Old Check-In</th>
+                                    <th>New Check-In</th>
+                                    <th>OLD CHECK-OUT</th>
+                                    <th>NEW CHECK-OUT</th>
+                                    <th t-if="request.env.user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin')">MANAGER</th>
+                                    <th class="text-center">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-if="regularize_requests">
+                                    <t t-foreach="regularize_requests" t-as="req">
+                                        <tr>
+                                            <td>
+                                                <span class="font-weight-bold text-dark"><t t-esc="req.employee_id.name"/></span>
+                                            </td>
+                                            <td>
+                                                <t t-if="req.regularize_type == 'check_in'">
+                                                    <span class="badge badge-light text-success border border-success" style="font-size: 0.85em; padding: 6px 10px;">
+                                                        <i class="fa fa-sign-in"/> Check-In
+                                                    </span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge badge-light text-danger border border-danger" style="font-size: 0.85em; padding: 6px 10px;">
+                                                        <i class="fa fa-sign-out"/> Check-Out
+                                                    </span>
+                                                </t>
+                                            </td>
+                                            <td class="font-weight-bold">
+                                                <t t-if="req.check_in_old">
+                                                    <span t-field="req.check_in_old" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                                </t>
+                                                <t t-elif="req.check_out_old">
+                                                    <span t-field="req.check_out_old" t-options="{'format': 'dd/MM/yyyy'}"/>
+                                                </t>
+                                            </td>
+                                            
+                                            <td>
+                                                <t t-if="req.regularize_type == 'check_in' and req.check_in_old"><span t-field="req.check_in_old" t-options="{'format': 'hh:mm a'}"/></t>
+                                                <t t-else="">-</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="req.regularize_type == 'check_in' and req.check_in_new"><span t-field="req.check_in_new" t-options="{'format': 'hh:mm a'}"/></t>
+                                                <t t-else="">-</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="req.regularize_type == 'check_out' and req.check_out_old"><span t-field="req.check_out_old" t-options="{'format': 'hh:mm a'}"/></t>
+                                                <t t-else="">-</t>
+                                            </td>
+                                            <td>
+                                                <t t-if="req.regularize_type == 'check_out' and req.check_out_new"><span t-field="req.check_out_new" t-options="{'format': 'hh:mm a'}"/></t>
+                                                <t t-else="">-</t>
+                                            </td>
+                                            <td t-if="request.env.user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin')">
+                                                <span t-field="req.manager_id.name"/>
+                                            </td>
+                                            
+                                            <td class="text-center">
+                                                <a t-attf-href="/my/approvals/regularize/approve/{{ req.id }}" class="btn btn-sm btn-success me-2" title="Approve">
+                                                    <i class="fa fa-check"/> Approve
+                                                </a>
+                                                <a t-attf-href="/my/approvals/regularize/reject/{{ req.id }}" class="btn btn-sm btn-danger" title="Reject">
+                                                    <i class="fa fa-times"/>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                                <t t-else="">
+                                    <tr>
+                                        <td colspan="8" class="ess-empty-row">
+                                            <i class="fa fa-check-circle-o fa-2x"/>
+                                            <div>No pending regularizations found. You're all caught up!</div>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>
