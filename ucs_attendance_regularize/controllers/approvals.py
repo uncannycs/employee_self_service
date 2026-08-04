@@ -55,10 +55,14 @@ class RegularizePortalApprovals(PortalApprovals):
                     'state': 'manager_approve'
                 })
 
-                if req.hr_id or req.employee_id.company_id.email:
+                if req.hr_id:
                     template = request.env.ref('ucs_attendance_regularize.email_template_attendance_regularize_manager_approve', raise_if_not_found=False)
                     if template:
-                        template.sudo().send_mail(req.id, force_send=True)
+                        template.sudo().send_mail(
+                            req.id,
+                            force_send=True,
+                            email_values={'email_to': req.hr_admin_emails}
+                        )
             elif req.state == 'manager_approve' and is_admin:
                 req.sudo().write({
                     'is_approve_hr': True,

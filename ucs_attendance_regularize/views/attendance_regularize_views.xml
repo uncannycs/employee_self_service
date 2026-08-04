@@ -6,7 +6,7 @@
         <field name="name">attendance.regularize.list</field>
         <field name="model">attendance.regularize</field>
         <field name="arch" type="xml">
-            <list string="Attendance Regularizations">
+            <list string="Attendance Regularizations" create="0" delete="0" edit="0">
                 <field name="name"/>
                 <field name="employee_id"/>
                 <field name="regularize_type"/>
@@ -20,7 +20,7 @@
         <field name="name">attendance.regularize.form</field>
         <field name="model">attendance.regularize</field>
         <field name="arch" type="xml">
-            <form string="Attendance Regularization">
+            <form string="Attendance Regularization" create="0" delete="0" edit="0">
                 <header>
                     <field name="state" widget="statusbar" statusbar_visible="draft,submit,manager_approve,hr_approve,reject"/>
                 </header>

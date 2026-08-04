@@ -97,7 +97,11 @@ class AttendanceRegularizeController(http.Controller):
         if reg.manager_id:
             template = request.env.ref('ucs_attendance_regularize.email_template_attendance_regularize_submit', raise_if_not_found=False)
             if template:
-                template.sudo().send_mail(reg.id, force_send=True)
+                template.sudo().send_mail(
+                    reg.id,
+                    force_send=True,
+                    email_values={'email_to': reg.manager_email}
+                )
 
         employee.sudo().write({'regularize_req_used': employee.regularize_req_used + 1})
 

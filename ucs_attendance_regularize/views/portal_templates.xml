@@ -11,7 +11,7 @@
         <xpath expr="//span[hasclass('ess-hrs-val')]/.." position="after">
             <td class="text-right">
                 <t t-set="existing_req" t-value="request.env['attendance.regularize'].sudo().search([('attendance_id', '=', att['id'])], order='id desc', limit=1)"/>
-                <t t-if="not existing_req or existing_req.state == 'draft'">
+                <t t-if="not existing_req or existing_req.state in ['draft', 'reject']">
                     <button type="button" class="btn btn-sm shadow-sm" style="background-color: transparent; color: #8b5cf6; border: 1px solid #8b5cf6; border-radius: 4px; font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.75rem; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='#8b5cf6'; this.style.color='white';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#8b5cf6';" data-bs-toggle="modal" t-attf-data-bs-target="#regularizeModal_{{ att_index }}">
                         <i class="fa fa-edit mr-1"/> Regularize
                     </button>
@@ -146,9 +146,7 @@
                 <t t-elif="existing_req.state == 'hr_approve'">
                     <span class="d-inline-block text-center" style="border: 1px solid #10b981; color: #10b981; border-radius: 4px; font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.75rem; background-color: rgba(16, 185, 129, 0.1);"><i class="fa fa-check-circle mr-1"/> Approved</span>
                 </t>
-                <t t-elif="existing_req.state == 'reject'">
-                    <span class="d-inline-block text-center" style="border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.75rem; background-color: rgba(239, 68, 68, 0.1);"><i class="fa fa-times-circle mr-1"/> Rejected</span>
-                </t>
+
                 <t t-else="">
                     <span class="d-inline-block text-center" style="border: 1px solid #3b82f6; color: #3b82f6; border-radius: 4px; font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.75rem; background-color: rgba(59, 130, 246, 0.1);"><i class="fa fa-paper-plane mr-1"/> Submitted</span>
                 </t>

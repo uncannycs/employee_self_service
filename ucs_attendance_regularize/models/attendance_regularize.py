@@ -40,6 +40,29 @@ class AttendanceRegularize(models.Model):
         ('reject', 'Rejected')
     ], string='Status', default='draft', tracking=True)
 
+    manager_email = fields.Char(string='Manager Email', compute='_compute_manager_email')
+    hr_admin_emails = fields.Char(string='HR Admin Emails', compute='_compute_hr_admin_emails')
+
+    def _compute_manager_email(self):
+        for rec in self:
+            if rec.manager_id:
+                rec.manager_email = rec.manager_id.work_email or (rec.manager_id.user_id.email if rec.manager_id.user_id else '')
+            else:
+                rec.manager_email = ''
+
+    def _compute_hr_admin_emails(self):
+        for rec in self:
+            rec.hr_admin_emails = ''
+            if rec.hr_id:
+                hr_employee = self.env['hr.employee'].search([('user_id', '=', rec.hr_id.id)], limit=1)
+
+                if hr_employee and hr_employee.work_email:
+                    rec.hr_admin_emails = hr_employee.work_email
+                elif rec.hr_id.email:
+                    rec.hr_admin_emails = rec.hr_id.email
+                elif rec.hr_id.login:
+                    rec.hr_admin_emails = rec.hr_id.login
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
