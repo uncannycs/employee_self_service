@@ -318,7 +318,7 @@
                                         </div>
                                         <div class="form-group mb-3">
                                             <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Allocated Hours (Optional)</t><t t-else="">Allocated Hours (Optional)</t></label>
-                                            <input type="text" class="form-control" name="allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
+                                            <input type="text" class="form-control ess-float-time-input" name="allocated_hours_str" value="00:00" placeholder="00:00" title="Enter hours (e.g. 1, 1.5, 01:30)" style="border-radius: 6px;"/>
                                         </div>
                                     </t>
                                     <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
@@ -328,7 +328,7 @@
                                         </div>
                                         <div class="form-group mb-3">
                                             <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Allocated Hours (Optional)</t><t t-else="">Allocated Hours (Optional)</t></label>
-                                            <input type="text" class="form-control" name="client_allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" style="border-radius: 6px;"/>
+                                            <input type="text" class="form-control ess-float-time-input" name="client_allocated_hours_str" value="00:00" placeholder="00:00" title="Enter hours (e.g. 1, 1.5, 01:30)" style="border-radius: 6px;"/>
                                         </div>
                                     </t>
                                     <div class="form-group mb-3">
@@ -1232,7 +1232,7 @@
                                         </div>
                                         <div class="form-group mb-3">
                                             <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Developer Allocated Hours</t><t t-else="">Allocated Hours</t></label>
-                                            <input type="text" class="form-control" name="allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.allocated_hours), int((task.allocated_hours - int(task.allocated_hours)) * 60)) if task.allocated_hours else ''" style="border-radius: 6px;"/>
+                                            <input type="text" class="form-control ess-float-time-input" name="allocated_hours_str" placeholder="00:00" title="Enter hours (e.g. 1, 1.5, 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.allocated_hours), int((task.allocated_hours - int(task.allocated_hours)) * 60)) if task.allocated_hours else '00:00'" style="border-radius: 6px;"/>
                                         </div>
                                     </t>
                                     <t t-if="(not is_employee) or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
@@ -1242,7 +1242,7 @@
                                         </div>
                                         <div class="form-group mb-3">
                                             <label class="text-muted small font-weight-bold"><t t-if="request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">Client Allocated Hours</t><t t-else="">Allocated Hours</t></label>
-                                            <input type="text" class="form-control" name="client_allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,5}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.client_allocated_hours), int((task.client_allocated_hours - int(task.client_allocated_hours)) * 60)) if task.client_allocated_hours else ''" style="border-radius: 6px;"/>
+                                            <input type="text" class="form-control ess-float-time-input" name="client_allocated_hours_str" placeholder="00:00" title="Enter hours (e.g. 1, 1.5, 01:30)" t-att-value="'{:02d}:{:02d}'.format(int(task.client_allocated_hours), int((task.client_allocated_hours - int(task.client_allocated_hours)) * 60)) if task.client_allocated_hours else '00:00'" style="border-radius: 6px;"/>
                                         </div>
                                     </t>
                                     <div class="form-group mb-3">
@@ -1526,6 +1526,51 @@
                         });
                     });
                 });
+
+                function formatOdooFloatTime(value) {
+                    if (!value || value.trim() === '') return '00:00';
+                    var val = value.trim();
+                    if (val.includes(':')) {
+                        var parts = val.split(':');
+                        var hrs = parseInt(parts[0], 10) || 0;
+                        var mins = parseInt(parts[1], 10) || 0;
+                        if (mins >= 60) {
+                            hrs += Math.floor(mins / 60);
+                            mins = mins % 60;
+                        }
+                        var hStr = hrs &lt; 10 ? '0' + hrs : '' + hrs;
+                        var mStr = mins &lt; 10 ? '0' + mins : '' + mins;
+                        return hStr + ':' + mStr;
+                    }
+                    var num = parseFloat(val);
+                    if (isNaN(num) || num &lt; 0) return '00:00';
+                    var hrs = Math.floor(num);
+                    var mins = Math.round((num - hrs) * 60);
+                    if (mins &gt;= 60) {
+                        hrs += 1;
+                        mins = 0;
+                    }
+                    var hStr = hrs &lt; 10 ? '0' + hrs : '' + hrs;
+                    var mStr = mins &lt; 10 ? '0' + mins : '' + mins;
+                    return hStr + ':' + mStr;
+                }
+
+                function initFloatTimeInputs() {
+                    var inputs = document.querySelectorAll('.ess-float-time-input, input[name="allocated_hours_str"], input[name="client_allocated_hours_str"], input[name="unit_amount_str"], input[name="unit_amount"]');
+                    inputs.forEach(function(inp) {
+                        if (!inp.value || inp.value.trim() === '') {
+                            inp.value = '00:00';
+                        }
+                        inp.addEventListener('blur', function() {
+                            inp.value = formatOdooFloatTime(inp.value);
+                        });
+                        inp.addEventListener('change', function() {
+                            inp.value = formatOdooFloatTime(inp.value);
+                        });
+                    });
+                }
+                initFloatTimeInputs();
+                document.addEventListener('shown.bs.modal', initFloatTimeInputs);
             </script>
             </div>
         </t>

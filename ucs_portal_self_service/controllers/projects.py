@@ -666,6 +666,8 @@ class PortalCustomProjects(ProjectCustomerPortal):
         description = post.get('description', '')
         date_deadline = post.get('date_deadline')
         allocated_hours_str = post.get('allocated_hours_str')
+        client_deadline = post.get('client_deadline')
+        client_allocated_hours_str = post.get('client_allocated_hours_str')
         user_id = int(post.get('user_id', 0)) if post.get('user_id') else False
         
         tag_ids_raw = request.httprequest.form.getlist('tag_ids')
@@ -688,6 +690,17 @@ class PortalCustomProjects(ProjectCustomerPortal):
                         vals['allocated_hours'] = float(h) + (float(m) / 60.0)
                     else:
                         vals['allocated_hours'] = float(allocated_hours_str)
+                except ValueError:
+                    pass
+            if client_deadline:
+                vals['client_deadline'] = client_deadline
+            if client_allocated_hours_str:
+                try:
+                    if ':' in client_allocated_hours_str:
+                        h, m = client_allocated_hours_str.split(':')
+                        vals['client_allocated_hours'] = float(h) + (float(m) / 60.0)
+                    else:
+                        vals['client_allocated_hours'] = float(client_allocated_hours_str)
                 except ValueError:
                     pass
             if user_id:
@@ -724,6 +737,8 @@ class PortalCustomProjects(ProjectCustomerPortal):
         description = post.get('description', '')
         date_deadline = post.get('date_deadline')
         allocated_hours_str = post.get('allocated_hours_str')
+        client_deadline = post.get('client_deadline')
+        client_allocated_hours_str = post.get('client_allocated_hours_str')
         user_id = int(post.get('user_id', 0)) if post.get('user_id') else False
         
         tag_ids_raw = request.httprequest.form.getlist('tag_ids')
@@ -751,6 +766,23 @@ class PortalCustomProjects(ProjectCustomerPortal):
                     vals['allocated_hours'] = 0.0
             else:
                 vals['allocated_hours'] = 0.0
+
+            if client_deadline:
+                vals['client_deadline'] = client_deadline
+            else:
+                vals['client_deadline'] = False
+
+            if client_allocated_hours_str:
+                try:
+                    if ':' in client_allocated_hours_str:
+                        h, m = client_allocated_hours_str.split(':')
+                        vals['client_allocated_hours'] = float(h) + (float(m) / 60.0)
+                    else:
+                        vals['client_allocated_hours'] = float(client_allocated_hours_str)
+                except ValueError:
+                    vals['client_allocated_hours'] = 0.0
+            else:
+                vals['client_allocated_hours'] = 0.0
                 
             if user_id:
                 vals['user_ids'] = [(6, 0, [user_id])]
