@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Attendance Regularize Portal',
-    'version': '19.0.0',
+    'version': '19.0.1',
     'summary': 'Add regularize button and popup to attendance portal',
     'description': 'Adds functionality to regularize attendance from the employee portal.',
     'category': 'Human Resources',
