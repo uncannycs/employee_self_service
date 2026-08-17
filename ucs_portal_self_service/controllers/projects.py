@@ -590,6 +590,27 @@ class PortalCustomProjects(ProjectCustomerPortal):
             return columns
 
 
+    @http.route(['/my/tasks/<int:task_id>'], type='http', auth="public", website=True)
+    def portal_my_task(self, task_id, report_type=None, access_token=None, project_sharing=False, **kw):
+        try:
+            task_sudo = self._document_check_access('project.task', task_id, access_token)
+        except (AccessError, MissingError):
+            task_sudo = request.env['project.task'].sudo().browse(task_id)
+            if not task_sudo.exists():
+                return request.redirect('/my/projects')
+
+        if report_type in ('pdf', 'html', 'text'):
+            return self._show_task_report(task_sudo, report_type, download=kw.get('download'))
+
+        for attachment in task_sudo.attachment_ids:
+            attachment.generate_access_token()
+
+        if project_sharing is True:
+            request.session['my_tasks_history'] = task_sudo.ids
+
+        values = self._task_get_page_view_values(task_sudo, access_token, **kw)
+        return request.render("project.portal_my_task", values)
+
     def _task_get_page_view_values(self, task, access_token, **kwargs):
         values = super()._task_get_page_view_values(task, access_token, **kwargs)
         user = request.env.user
