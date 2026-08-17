@@ -10,7 +10,7 @@ class AccountAnalyticLine(models.Model):
         ('confirm', 'Submitted'),
         ('approved', 'Approved'),
         ('refused', 'Refused')
-    ], string='Status', default='draft', required=True, copy=False, tracking=True)
+    ], string='Status', default='draft', required=True, copy=False)
     
     reject_reason = fields.Text(string='Reject Reason', copy=False)
 

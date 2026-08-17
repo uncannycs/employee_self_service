@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit portal_my_task_override to add Backend-Style Notebook Tabs View & Backend-Style Sub-task Modal -->
+    <template id="portal_my_task_subtasks_inherit" inherit_id="ucs_portal_self_service.portal_my_task_override" name="Portal Task Notebook Tabs Integration">
+        
+        <!-- Parent Task Banner if current task is a sub-task -->
+        <xpath expr="//div[hasclass('ess-hist-hero-inner')]" position="before">
+            <t t-if="task.parent_id">
+                <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center justify-content-between shadow-sm" style="border-radius: 10px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+                    <div>
+                        <i class="fa fa-level-up me-2"/> <strong>Sub-task of:</strong> 
+                        <a t-attf-href="/my/tasks/#{task.parent_id.id}" class="font-weight-bold text-white text-decoration-underline ms-1">
+                            <t t-esc="task.parent_id.name"/>
+                        </a>
+                    </div>
+                    <span class="badge bg-light text-primary rounded-pill px-3 py-1 font-weight-bold">Sub-task</span>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Replace stacked cards in col-md-8 with Backend-style Notebook Tabs View -->
+        <xpath expr="//div[hasclass('col-md-8')]" position="replace">
+            <div class="col-md-8">
+                
+                <!-- Odoo Backend Style Notebook Tabs Container -->
+                <t t-set="visible_timesheets" t-value="[ts for ts in (timesheets or []) if is_employee or (ts.state or 'approved') == 'approved']"/>
+                <div class="card mb-4 border-0 shadow-sm" style="border-radius: 12px; overflow: hidden; background: #ffffff;">
+                    <div class="card-header bg-white border-bottom p-0">
+                        <ul class="nav nav-tabs nav-tabs-custom card-header-tabs m-0 border-bottom-0" id="taskDetailNotebookTabs" role="tablist" style="padding: 0 16px;">
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active font-weight-bold px-4 py-3" id="tab-description-link" data-bs-toggle="tab" data-toggle="tab" href="#tab-description-content" role="tab" aria-controls="tab-description-content" aria-selected="true" style="border: none; border-bottom: 3px solid var(--ess-primary, #4a148c); color: var(--ess-primary, #4a148c); font-size: 0.92rem;">
+                                    <i class="fa fa-align-left me-1"/> Description
+                                </a>
+                            </li>
+                            <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_portal_timesheet_log')">
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link font-weight-bold px-4 py-3 text-muted" id="tab-timesheets-link" data-bs-toggle="tab" data-toggle="tab" href="#tab-timesheets-content" role="tab" aria-controls="tab-timesheets-content" aria-selected="false" style="border: none; border-bottom: 3px solid transparent; font-size: 0.92rem;">
+                                        <i class="fa fa-list me-1"/> Timesheets
+                                        <span class="badge rounded-pill bg-light text-primary border ms-1" style="font-size: 0.75rem;">
+                                            <t t-esc="len(visible_timesheets)"/>
+                                        </span>
+                                    </a>
+                                </li>
+                            </t>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link font-weight-bold px-4 py-3 text-muted" id="tab-subtasks-link" data-bs-toggle="tab" data-toggle="tab" href="#tab-subtasks-content" role="tab" aria-controls="tab-subtasks-content" aria-selected="false" style="border: none; border-bottom: 3px solid transparent; font-size: 0.92rem;">
+                                    <i class="fa fa-sitemap me-1"/> Sub-tasks
+                                    <span class="badge rounded-pill bg-light text-primary border ms-1" style="font-size: 0.75rem;">
+                                        <t t-esc="len(task.child_ids) if task.child_ids else 0"/>
+                                    </span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="tab-content" id="taskDetailNotebookContent">
+                            
+                            <!-- TAB 1: Description -->
+                            <div class="tab-pane fade show active" id="tab-description-content" role="tabpanel" aria-labelledby="tab-description-link">
+                                <div class="card-text py-2">
+                                    <t t-if="task.description" t-out="task.description"/>
+                                    <t t-else=""><p class="text-muted font-italic mb-0">No description provided for this task.</p></t>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: Timesheets -->
+                            <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_portal_timesheet_log')">
+                                <div class="tab-pane fade" id="tab-timesheets-content" role="tabpanel" aria-labelledby="tab-timesheets-link">
+                                    
+                                    <!-- Employee Task Hours Summary Card -->
+                                    <t t-if="is_employee">
+                                        <t t-set="dev_alloc_hrs" t-value="task.developer_allocated_hours or task.allocated_hours or 0.0"/>
+                                        <t t-set="logged_hrs" t-value="sum(ts.unit_amount for ts in timesheets) if timesheets else 0.0"/>
+                                        <t t-set="remaining_hrs" t-value="dev_alloc_hrs - logged_hrs"/>
+                                        <t t-set="prog_pct" t-value="min(100.0, round((logged_hrs / dev_alloc_hrs * 100.0), 1)) if dev_alloc_hrs &gt; 0 else 0.0"/>
+                                        
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-4">
+                                                <div class="p-3 border rounded bg-light text-center shadow-sm" style="border-radius: 8px;">
+                                                    <small class="text-muted d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">DEVELOPER ALLOCATED</small>
+                                                    <span class="h5 font-weight-bold text-dark mb-0">
+                                                        <t t-esc="dev_alloc_hrs" t-options='{"widget": "float_time"}'/>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="p-3 border rounded bg-light text-center shadow-sm" style="border-radius: 8px;">
+                                                    <small class="text-muted d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">HOURS LOGGED</small>
+                                                    <span class="h5 font-weight-bold text-primary mb-0">
+                                                        <t t-esc="logged_hrs" t-options='{"widget": "float_time"}'/>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="p-3 border rounded bg-light text-center shadow-sm" style="border-radius: 8px;">
+                                                    <small class="text-muted d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">REMAINING HOURS</small>
+                                                    <span t-attf-class="h5 font-weight-bold #{'text-success' if remaining_hrs &gt; 0 else ('text-danger' if remaining_hrs &lt; 0 else 'text-muted')} mb-0">
+                                                        <t t-esc="remaining_hrs" t-options='{"widget": "float_time"}'/>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <t t-if="dev_alloc_hrs &gt; 0">
+                                            <div class="mb-4">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <small class="text-muted font-weight-bold">Time Spent Progress</small>
+                                                    <small class="font-weight-bold text-primary"><t t-esc="prog_pct"/>%</small>
+                                                </div>
+                                                <div class="progress" style="height: 6px; border-radius: 4px; background: #e2e8f0;">
+                                                    <div class="progress-bar bg-primary" role="progressbar" t-attf-style="width: #{prog_pct}%; border-radius: 4px;" t-att-aria-valuenow="prog_pct" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </t>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="card-title text-muted mb-0"><i class="fa fa-clock-o"/> Timesheets Logged</h6>
+                                        <t t-if="is_employee">
+                                            <button class="btn btn-sm btn-light text-primary font-weight-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addTimesheetModalInline" data-toggle="modal" data-target="#addTimesheetModalInline" style="border-radius: 6px;">
+                                                <i class="fa fa-plus"/> Log Time
+                                            </button>
+                                        </t>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Description</th>
+                                                    <th>Employee</th>
+                                                    <t t-if="is_employee">
+                                                        <th>Status</th>
+                                                    </t>
+                                                    <th class="text-right">Hours</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-if="visible_timesheets">
+                                                    <t t-foreach="visible_timesheets" t-as="ts">
+                                                        <t t-set="ts_st" t-value="ts.state or 'approved'"/>
+                                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                            <td><t t-esc="ts.date"/></td>
+                                                            <td><t t-esc="ts.name"/></td>
+                                                            <td><t t-esc="ts.employee_id.name"/></td>
+                                                            <t t-if="is_employee">
+                                                                <td>
+                                                                    <t t-if="ts_st == 'draft'">
+                                                                        <span class="badge bg-secondary rounded-pill">Draft</span>
+                                                                    </t>
+                                                                    <t t-elif="ts_st == 'confirm'">
+                                                                        <span class="badge bg-warning text-dark rounded-pill">Submitted</span>
+                                                                    </t>
+                                                                    <t t-elif="ts_st == 'approved'">
+                                                                        <span class="badge bg-success rounded-pill">Approved</span>
+                                                                    </t>
+                                                                    <t t-elif="ts_st == 'refused'">
+                                                                        <span class="badge bg-danger rounded-pill">Refused</span>
+                                                                    </t>
+                                                                    <t t-else="">
+                                                                        <span class="badge bg-light text-dark rounded-pill"><t t-esc="ts_st"/></span>
+                                                                    </t>
+                                                                </td>
+                                                            </t>
+                                                            <td class="text-right"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></td>
+                                                        </tr>
+                                                    </t>
+                                                </t>
+                                                <t t-else="">
+                                                    <tr>
+                                                        <td t-att-colspan="5 if is_employee else 4" class="text-center text-muted font-italic py-4">
+                                                            No timesheets logged for this task yet.
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- TAB 3: Sub-tasks -->
+                            <div class="tab-pane fade" id="tab-subtasks-content" role="tabpanel" aria-labelledby="tab-subtasks-link">
+                                
+                                <!-- Employee Sub-tasks Hours Summary Card -->
+                                <t t-if="is_employee and task.child_ids">
+                                    <t t-set="sub_alloc_hrs" t-value="sum((sub.developer_allocated_hours or sub.allocated_hours or 0.0) for sub in task.child_ids) if task.child_ids else 0.0"/>
+                                    <t t-set="sub_logged_hrs" t-value="sum(sum(t.unit_amount for t in sub.timesheet_ids) for sub in task.child_ids) if task.child_ids else 0.0"/>
+                                    <t t-set="sub_rem_hrs" t-value="sub_alloc_hrs - sub_logged_hrs"/>
+                                    
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-4">
+                                            <div class="p-3 border rounded bg-light text-center shadow-sm" style="border-radius: 8px;">
+                                                <small class="text-muted d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">SUB-TASKS ALLOCATED</small>
+                                                <span class="h5 font-weight-bold text-dark mb-0">
+                                                    <t t-esc="sub_alloc_hrs" t-options='{"widget": "float_time"}'/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 border rounded bg-light text-center shadow-sm" style="border-radius: 8px;">
+                                                <small class="text-muted d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">SUB-TASKS LOGGED</small>
+                                                <span class="h5 font-weight-bold text-info mb-0">
+                                                    <t t-esc="sub_logged_hrs" t-options='{"widget": "float_time"}'/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 border rounded bg-light text-center shadow-sm" style="border-radius: 8px;">
+                                                <small class="text-muted d-block font-weight-bold uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">SUB-TASKS REMAINING</small>
+                                                <span t-attf-class="h5 font-weight-bold #{'text-success' if sub_rem_hrs &gt; 0 else ('text-danger' if sub_rem_hrs &lt; 0 else 'text-muted')} mb-0">
+                                                    <t t-esc="sub_rem_hrs" t-options='{"widget": "float_time"}'/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="card-title text-muted mb-0"><i class="fa fa-sitemap"/> Sub-tasks List</h6>
+                                    <button class="btn btn-sm btn-light text-primary font-weight-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#createSubtaskModal" data-toggle="modal" data-target="#createSubtaskModal" style="border-radius: 6px;">
+                                        <i class="fa fa-plus"/> Add Sub-task
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Sub-task Title</th>
+                                                <th>Stage</th>
+                                                <th>Assignees</th>
+                                                <th>Deadline</th>
+                                                <th class="text-right">Allocated Hours</th>
+                                                <th class="text-center" style="width: 60px;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-if="task.child_ids">
+                                                <t t-foreach="task.child_ids.sudo()" t-as="sub">
+                                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                        <td>
+                                                            <a t-attf-href="/my/tasks/#{sub.id}" class="font-weight-bold text-decoration-none" style="color: var(--ess-primary, #4a148c);">
+                                                                <i class="fa fa-tasks text-muted me-1"/> <t t-esc="sub.name"/>
+                                                            </a>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge rounded-pill bg-info text-dark" style="font-size: 0.75rem;">
+                                                                <t t-esc="sub.stage_id.name if sub.stage_id else 'New'"/>
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <t t-if="sub.user_ids">
+                                                                <t t-foreach="sub.user_ids" t-as="u">
+                                                                    <span class="badge rounded-pill bg-light text-dark border me-1">
+                                                                        <t t-esc="u.name"/>
+                                                                    </span>
+                                                                </t>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <span class="text-muted small">Unassigned</span>
+                                                            </t>
+                                                        </td>
+                                                        <td>
+                                                            <t t-if="sub.date_deadline">
+                                                                <small class="text-muted"><t t-esc="sub.date_deadline"/></small>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <span class="text-muted small">-</span>
+                                                            </t>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <small class="font-weight-bold text-dark">
+                                                                <t t-set="sub_hrs" t-value="sub.developer_allocated_hours or sub.allocated_hours or 0.0"/>
+                                                                <t t-esc="sub_hrs" t-options='{"widget": "float_time"}'/>
+                                                            </small>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <form action="/my/subtask/unlink" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this sub-task?');">
+                                                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                                <input type="hidden" name="parent_id" t-att-value="task.id"/>
+                                                                <input type="hidden" name="subtask_id" t-att-value="sub.id"/>
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger p-1 border-0" title="Remove Sub-task" style="font-size: 0.95rem; line-height: 1;">
+                                                                    <i class="fa fa-trash-o"/>
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </t>
+                                            <t t-else="">
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-4">
+                                                        <i class="fa fa-info-circle me-1"/> No sub-tasks created for this task yet.
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Switching Active Underline Script -->
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const navLinks = document.querySelectorAll('#taskDetailNotebookTabs .nav-link');
+                        navLinks.forEach(link => {
+                            link.addEventListener('shown.bs.tab', function(e) {
+                                navLinks.forEach(l => {
+                                    l.style.borderBottomColor = 'transparent';
+                                    l.classList.remove('text-primary');
+                                    l.classList.add('text-muted');
+                                });
+                                e.target.style.borderBottomColor = 'var(--ess-primary, #4a148c)';
+                                e.target.classList.remove('text-muted');
+                                e.target.classList.add('text-primary');
+                            });
+                        });
+                    });
+                </script>
+
+                <!-- Chatter / Communication History Section -->
+                <div id="task_chat" class="mt-4" data-anchor="true">
+                    <h4 class="text-muted"><i class="fa fa-comments"/> Communication History</h4>
+                    <t t-call="portal.message_thread">
+                        <t t-set="object" t-value="task"/>
+                        <t t-set="token" t-value="task.access_token"/>
+                        <t t-set="pid" t-value="pid"/>
+                        <t t-set="hash" t-value="hash"/>
+                    </t>
+                </div>
+
+            </div>
+
+            <!-- Add: Sub-tasks Modal (Matching Backend Dialog View from Image 2) -->
+            <div class="modal fade" id="createSubtaskModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <form action="/my/subtask/create" method="post" id="subtaskModalForm">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="parent_id" t-att-value="task.id"/>
+                            <input type="hidden" name="subtask_mode" id="subtask_mode_input" value="existing"/>
+
+                            <!-- Header -->
+                            <div class="modal-header bg-white border-bottom pb-3 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                <h5 class="modal-title font-weight-bold text-dark" id="subtaskModalTitle">
+                                    Add: Sub-tasks
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <!-- Body -->
+                            <div class="modal-body px-4 pt-3 pb-4">
+                                
+                                <!-- VIEW 1: Existing Project Tasks Selection List (Default Backend View) -->
+                                <div id="subtask_existing_view">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary text-white px-2 py-1" style="font-size: 0.8rem;">Project</span>
+                                            <span class="font-weight-bold text-dark"><t t-esc="task.project_id.name if task.project_id else 'Project'"/></span>
+                                        </div>
+                                        <input type="text" id="subtask_search_filter" class="form-control form-control-sm" style="max-width: 220px; border-radius: 6px;" placeholder="Search..." onkeyup="filterSubtaskTable()"/>
+                                    </div>
+
+                                    <div class="table-responsive border rounded" style="max-height: 320px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover align-middle mb-0" id="existing_tasks_table">
+                                            <thead class="thead-light sticky-top" style="background: #f8fafc; z-index: 1;">
+                                                <tr>
+                                                    <th style="width: 40px;" class="text-center">Select</th>
+                                                    <th>Title</th>
+                                                    <th>Project</th>
+                                                    <th>Assignees</th>
+                                                    <th class="text-right">Allocated Hours</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <t t-if="project_existing_tasks">
+                                                    <t t-foreach="project_existing_tasks" t-as="ext">
+                                                        <tr style="cursor: pointer;" onclick="selectSubtaskRadio(this)">
+                                                            <td class="text-center">
+                                                                <input type="radio" name="existing_task_id" t-att-value="ext.id" class="subtask-radio-item"/>
+                                                            </td>
+                                                            <td class="task-title-cell font-weight-bold" style="color: var(--ess-primary, #4a148c);">
+                                                                <t t-esc="ext.name"/>
+                                                            </td>
+                                                            <td class="text-muted small">
+                                                                <t t-esc="ext.project_id.name if ext.project_id else ''"/>
+                                                            </td>
+                                                            <td>
+                                                                <t t-if="ext.user_ids">
+                                                                    <t t-foreach="ext.user_ids" t-as="u">
+                                                                        <span class="badge rounded-pill bg-light text-dark border me-1">
+                                                                            <t t-esc="u.name"/>
+                                                                        </span>
+                                                                    </t>
+                                                                </t>
+                                                                <t t-else="">
+                                                                    <span class="text-muted small">Unassigned</span>
+                                                                </t>
+                                                            </td>
+                                                            <td class="text-right">
+                                                                <small class="font-weight-bold text-dark">
+                                                                    <t t-set="ext_hrs" t-value="ext.developer_allocated_hours or ext.allocated_hours or 0.0"/>
+                                                                    <t t-esc="ext_hrs" t-options='{"widget": "float_time"}'/>
+                                                                </small>
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </t>
+                                                <t t-else="">
+                                                    <tr>
+                                                        <td colspan="5" class="text-center text-muted py-4">
+                                                            <i class="fa fa-info-circle me-1"/> No other tasks available in this project to link as a sub-task.
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- VIEW 2: Create New Sub-task Form (ONLY for users with task creation permission!) -->
+                                <t t-if="has_task_create_access">
+                                    <div id="subtask_new_view" style="display: none;">
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold">Sub-task Title <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="name" id="subtask_name_field" placeholder="Enter sub-task title..." style="border-radius: 6px;"/>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label class="text-muted small font-weight-bold">Assignee</label>
+                                                <select class="form-control" name="user_id" style="border-radius: 6px;">
+                                                    <option value="">-- Unassigned --</option>
+                                                    <t t-foreach="assignable_users" t-as="u">
+                                                        <option t-att-value="u.id" t-att-selected="u.id in task.user_ids.ids">
+                                                            <t t-esc="u.name"/>
+                                                        </option>
+                                                    </t>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label class="text-muted small font-weight-bold">Developer Deadline</label>
+                                                <input type="date" class="form-control" name="date_deadline" style="border-radius: 6px;"/>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label class="text-muted small font-weight-bold">Developer Allocated Hours</label>
+                                                <input type="text" class="form-control" name="allocated_hours_str" placeholder="00:00" pattern="^([0-9]{1,2}):([0-5][0-9])$" title="Please enter time in HH:MM format (e.g., 04:00)" style="border-radius: 6px;"/>
+                                            </div>
+                                            <div class="col-md-6 form-group mb-3">
+                                                <label class="text-muted small font-weight-bold">Tags</label>
+                                                <div class="portal-tag-picker-container" data-input-name="tag_ids">
+                                                    <div class="portal-tag-badge-container d-flex flex-wrap align-items-center gap-1 p-2 border rounded" style="min-height: 42px; background: #fff; cursor: text;">
+                                                        <input type="text" class="portal-tag-search-input border-0 p-0 shadow-none flex-grow-1" style="outline: none; min-width: 120px; font-size: 0.9rem;" placeholder="Search or select tags..."/>
+                                                    </div>
+                                                    <div class="portal-tag-dropdown-menu shadow-sm border rounded mt-1 overflow-auto position-absolute w-100 bg-white" style="display: none; max-height: 180px; z-index: 1050;">
+                                                        <t t-foreach="all_tags" t-as="tag">
+                                                            <div class="portal-tag-option px-3 py-2 border-bottom" t-att-data-tag-id="tag.id" t-att-data-tag-name="tag.name" t-att-data-tag-color="tag.color or 0" style="cursor: pointer;">
+                                                                <span class="badge rounded-pill me-2" t-attf-style="background-color: #{'#4a148c' if not tag.color else '#00838f'}; color: white;">
+                                                                    <t t-esc="tag.name"/>
+                                                                </span>
+                                                            </div>
+                                                        </t>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <label class="text-muted small font-weight-bold">Description</label>
+                                            <textarea class="form-control" name="description" rows="3" placeholder="Sub-task details..." style="border-radius: 6px;"/>
+                                        </div>
+                                    </div>
+                                </t>
+
+                            </div>
+
+                            <!-- Footer Action Buttons (Matching Backend Dialog Buttons: SELECT, NEW, CLOSE from Image 2) -->
+                            <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-start gap-2">
+                                
+                                <!-- SELECT Button (Submits selected existing task) -->
+                                <button type="submit" id="subtask_btn_select" class="btn text-white font-weight-bold px-4" style="background: #00838f; border-radius: 4px; font-size: 0.85rem; text-transform: uppercase;">
+                                    SELECT
+                                </button>
+
+                                <!-- NEW Button (ONLY for users with group_portal_task_create permission!) -->
+                                <t t-if="has_task_create_access">
+                                    <button type="button" id="subtask_btn_new" class="btn text-white font-weight-bold px-4" onclick="switchToNewSubtaskForm()" style="background: #00838f; border-radius: 4px; font-size: 0.85rem; text-transform: uppercase;">
+                                        NEW
+                                    </button>
+                                </t>
+
+                                <!-- SAVE SUBTASK Button (Visible when filling NEW form) -->
+                                <button type="submit" id="subtask_btn_save" class="btn text-white font-weight-bold px-4" style="background: var(--ess-primary, #4a148c); border-radius: 4px; font-size: 0.85rem; text-transform: uppercase; display: none;">
+                                    SAVE SUB-TASK
+                                </button>
+
+                                <!-- BACK TO LIST Button (Visible when filling NEW form) -->
+                                <button type="button" id="subtask_btn_back" class="btn btn-outline-secondary font-weight-bold px-3" onclick="switchToListSubtaskForm()" style="border-radius: 4px; font-size: 0.85rem; text-transform: uppercase; display: none;">
+                                    BACK TO LIST
+                                </button>
+
+                                <!-- CLOSE Button -->
+                                <button type="button" class="btn btn-outline-secondary font-weight-bold px-3 ms-auto" data-bs-dismiss="modal" data-dismiss="modal" style="border-radius: 4px; font-size: 0.85rem; text-transform: uppercase;">
+                                    CLOSE
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backend Dialog JS Script -->
+            <script type="text/javascript">
+                function selectSubtaskRadio(trElem) {
+                    var radio = trElem.querySelector('.subtask-radio-item');
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                }
+
+                function filterSubtaskTable() {
+                    var input = document.getElementById('subtask_search_filter');
+                    var filter = input ? input.value.toLowerCase() : '';
+                    var table = document.getElementById('existing_tasks_table');
+                    if (!table) return;
+                    var rows = table.getElementsByTagName('tr');
+                    for (var i = 1; i &lt; rows.length; i++) {
+                        var titleCell = rows[i].querySelector('.task-title-cell');
+                        if (titleCell) {
+                            var text = titleCell.innerText || titleCell.textContent;
+                            rows[i].style.display = (text.toLowerCase().indexOf(filter) &gt; -1) ? '' : 'none';
+                        }
+                    }
+                }
+
+                function switchToNewSubtaskForm() {
+                    document.getElementById('subtask_mode_input').value = 'new';
+                    document.getElementById('subtask_existing_view').style.display = 'none';
+                    document.getElementById('subtask_new_view').style.display = 'block';
+                    document.getElementById('subtaskModalTitle').innerHTML = 'Create Sub-task';
+                    
+                    document.getElementById('subtask_btn_select').style.display = 'none';
+                    document.getElementById('subtask_btn_new').style.display = 'none';
+                    document.getElementById('subtask_btn_save').style.display = 'inline-block';
+                    document.getElementById('subtask_btn_back').style.display = 'inline-block';
+                    
+                    var nameField = document.getElementById('subtask_name_field');
+                    if (nameField) nameField.setAttribute('required', '1');
+                }
+
+                function switchToListSubtaskForm() {
+                    document.getElementById('subtask_mode_input').value = 'existing';
+                    document.getElementById('subtask_existing_view').style.display = 'block';
+                    var newView = document.getElementById('subtask_new_view');
+                    if (newView) newView.style.display = 'none';
+                    document.getElementById('subtaskModalTitle').innerHTML = 'Add: Sub-tasks';
+                    
+                    document.getElementById('subtask_btn_select').style.display = 'inline-block';
+                    var btnNew = document.getElementById('subtask_btn_new');
+                    if (btnNew) btnNew.style.display = 'inline-block';
+                    document.getElementById('subtask_btn_save').style.display = 'none';
+                    document.getElementById('subtask_btn_back').style.display = 'none';
+                    
+                    var nameField = document.getElementById('subtask_name_field');
+                    if (nameField) nameField.removeAttribute('required');
+                }
+            </script>
+        </xpath>
+
+    </template>
+</odoo>
