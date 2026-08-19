@@ -12,6 +12,7 @@
     'depends': ['hr_timesheet', 'account', 'ucs_portal_self_service'],
     'data': [
         'security/security_groups.xml',
+        'data/ir_cron_data.xml',
         'views/approvals_templates.xml',
         'views/timesheets_templates.xml',
         'views/account_analytic_line_views.xml',

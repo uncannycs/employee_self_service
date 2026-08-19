@@ -1,23 +1,12 @@
+# -*- coding: utf-8 -*-
 import logging
-from datetime import datetime, time
-from odoo import models, fields, api
+from datetime import datetime, timedelta
+from odoo import models, fields, api, _
 
 _logger = logging.getLogger(__name__)
 
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
-
-    regularize_request_assign = fields.Integer(string='Regularization Requests Assigned', default=0)
-    regularize_req_used = fields.Integer(string='Regularization Requests Used', default=0)
-
-    @api.model
-    def _cron_reset_regularize_requests(self):
-        for company in self.env['res.company'].search([]):
-            employees = self.search([('company_id', '=', company.id)])
-            employees.write({
-                'regularize_request_assign': company.regularize_request_per_month,
-                'regularize_req_used': 0
-            })
 
     def _format_float_time(self, hours):
         h = int(hours or 0)
@@ -28,21 +17,10 @@ class HrEmployee(models.Model):
         return f"{h:02d}:{m:02d}"
 
     @api.model
-    def _cron_send_attendance_shortfall_notifications(self):
+    def _cron_send_timesheet_shortfall_notifications(self):
         today = fields.Date.context_today(self)
-        weekday = str(today.weekday())
-
-        tz_name = self.env.user.tz or 'UTC'
-        try:
-            import pytz
-            local_tz = pytz.timezone(tz_name)
-            start_local = local_tz.localize(datetime.combine(today, time.min))
-            end_local = local_tz.localize(datetime.combine(today, time.max))
-            start_utc = start_local.astimezone(pytz.utc).replace(tzinfo=None)
-            end_utc = end_local.astimezone(pytz.utc).replace(tzinfo=None)
-        except Exception:
-            start_utc = datetime.combine(today, time.min)
-            end_utc = datetime.combine(today, time.max)
+        target_date = today - timedelta(days=1)
+        weekday = str(target_date.weekday())
 
         active_employees = self.search([('active', '=', True)])
         shortfall_data = []
@@ -52,7 +30,7 @@ class HrEmployee(models.Model):
             if not calendar:
                 continue
 
-            # 1. Check if today is a Weekend / Off-day in Working Schedule (excluding lunch breaks)
+            # 1. Check if target_date is a Weekend / Off-day in Working Schedule (excluding lunch breaks)
             attendances_spec = calendar.attendance_ids.filtered(lambda a: a.dayofweek == weekday and getattr(a, 'day_period', '') != 'lunch')
             if not attendances_spec:
                 continue
@@ -61,22 +39,22 @@ class HrEmployee(models.Model):
             if required_hours <= 0.1:
                 continue
 
-            # 2. Check if today is a Public Holiday / Global Leave on Calendar
+            # 2. Check if target_date is a Public Holiday / Global Leave on Calendar
             public_holiday = self.env['resource.calendar.leaves'].sudo().search([
                 '|', ('calendar_id', '=', calendar.id), ('calendar_id', '=', False),
                 ('resource_id', '=', False),
-                ('date_from', '<=', end_utc),
-                ('date_to', '>=', start_utc)
+                ('date_from', '<=', target_date),
+                ('date_to', '>=', target_date)
             ], limit=1)
             if public_holiday:
                 continue
 
-            # Calculate total approved leave hours for today (Full Day or Partial/Hourly Leave)
+            # 3. Calculate total approved leave hours for target_date (Full Day or Partial/Hourly Leave)
             approved_leaves = self.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
                 ('state', '=', 'validate'),
-                ('request_date_from', '<=', today),
-                ('request_date_to', '>=', today)
+                ('request_date_from', '<=', target_date),
+                ('request_date_to', '>=', target_date)
             ])
             
             leave_hours = 0.0
@@ -89,31 +67,31 @@ class HrEmployee(models.Model):
 
             net_required_hours = max(0.0, required_hours - leave_hours)
             if net_required_hours <= 0.05:
-                # Fully covered by leave for today
+                # Fully covered by leave for target_date
                 continue
 
-            day_attendances = self.env['hr.attendance'].sudo().search([
+            # 4. Calculate actual logged timesheet hours for target_date (ALL statuses included)
+            timesheet_lines = self.env['account.analytic.line'].sudo().search([
                 ('employee_id', '=', employee.id),
-                ('check_in', '>=', start_utc),
-                ('check_in', '<=', end_utc)
+                ('date', '=', target_date)
             ])
-            actual_hours = sum(att.worked_hours or 0.0 for att in day_attendances)
+            actual_timesheet_hours = sum(line.unit_amount or 0.0 for line in timesheet_lines)
 
-            if actual_hours < (net_required_hours - 0.05):
-                shortfall_hours = net_required_hours - actual_hours
+            if actual_timesheet_hours < (net_required_hours - 0.05):
+                shortfall_hours = net_required_hours - actual_timesheet_hours
                 shortfall_data.append({
                     'employee': employee,
                     'required_hours': required_hours,
                     'leave_hours': leave_hours,
                     'net_required_hours': net_required_hours,
-                    'actual_hours': actual_hours,
+                    'actual_timesheet_hours': actual_timesheet_hours,
                     'shortfall_hours': shortfall_hours,
                     'manager': employee.parent_id,
                     'manager_manager': employee.parent_id.parent_id if employee.parent_id else False,
                 })
 
         if not shortfall_data:
-            _logger.info("No attendance shortfall detected for today (%s).", today)
+            _logger.info("No timesheet shortfall detected for yesterday (%s).", target_date)
             return
 
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
@@ -155,7 +133,7 @@ class HrEmployee(models.Model):
                 req_str = self._format_float_time(item['required_hours'])
                 lve_str = self._format_float_time(item['leave_hours'])
                 net_str = self._format_float_time(item['net_required_hours'])
-                act_str = self._format_float_time(item['actual_hours'])
+                act_str = self._format_float_time(item['actual_timesheet_hours'])
                 sht_str = self._format_float_time(item['shortfall_hours'])
                 rows_html += f"""
                 <tr style="border-bottom: 1px solid #e2e8f0;">
@@ -169,15 +147,15 @@ class HrEmployee(models.Model):
                 </tr>
                 """
 
-            subject = f"[Attendance Shortfall Alert] Daily Attendance Shortfall Report ({today})"
+            subject = f"[Timesheet Shortfall Alert] Daily Timesheet Shortfall Report ({target_date})"
             body_html = f"""
             <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
-                <div style="background-color: #dc2626; padding: 15px 20px; border-radius: 8px 8px 0 0;">
-                    <h3 style="color: #ffffff; margin: 0;">Daily Attendance Shortfall Alert</h3>
+                <div style="background-color: #6C5CE7; padding: 15px 20px; border-radius: 8px 8px 0 0;">
+                    <h3 style="color: #ffffff; margin: 0;">Daily Timesheet Shortfall Alert</h3>
                 </div>
                 <div style="border: 1px solid #e2e8f0; border-top: none; padding: 20px; border-radius: 0 0 8px 8px; background: #ffffff;">
                     <p>Dear <strong>{mgr.name}</strong>,</p>
-                    <p>The following team members under your reporting hierarchy logged fewer attendance hours than their net required working schedule today (<strong>{today}</strong>):</p>
+                    <p>The following team members under your reporting hierarchy logged fewer timesheet hours than their net required working schedule yesterday (<strong>{target_date}</strong>):</p>
                     
                     <table style="border-collapse: collapse; width: 100%; margin: 15px 0;">
                         <thead>
@@ -187,7 +165,7 @@ class HrEmployee(models.Model):
                                 <th style="padding: 10px; text-align: center;">Schedule</th>
                                 <th style="padding: 10px; text-align: center;">Approved Leave</th>
                                 <th style="padding: 10px; text-align: center;">Net Required</th>
-                                <th style="padding: 10px; text-align: center;">Actual Logged</th>
+                                <th style="padding: 10px; text-align: center;">Timesheet Logged</th>
                                 <th style="padding: 10px; text-align: center;">Shortfall</th>
                             </tr>
                         </thead>
@@ -197,7 +175,7 @@ class HrEmployee(models.Model):
                     </table>
 
                     <br/>
-                    <p style="font-size: 12px; color: #777;">This is an automated nightly notification from Employee Self Service System.</p>
+                    <p style="font-size: 12px; color: #777;">This is an automated daily notification from Employee Self Service System.</p>
                 </div>
             </div>
             """
@@ -211,4 +189,4 @@ class HrEmployee(models.Model):
                 })
                 mail.send()
             except Exception as e:
-                _logger.error("Failed to send consolidated attendance shortfall report to %s: %s", mgr_email, str(e))
+                _logger.error("Failed to send consolidated timesheet shortfall report to %s: %s", mgr_email, str(e))
