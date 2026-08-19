@@ -111,7 +111,6 @@ class HrLeave(models.Model):
             user.has_group('hr_holidays.group_hr_holidays_user') or
             user.has_group('hr_holidays.group_hr_holidays_responsible') or
             (self.employee_id and (
-                self.employee_id.leave_manager_id == user or 
                 self.employee_id.parent_id.user_id == user or 
                 self.employee_id in subordinates
             ))
@@ -128,8 +127,8 @@ class HrLeave(models.Model):
         if not employee:
             return
         
-        manager = employee.leave_manager_id or employee.parent_id.user_id
-        manager_email = manager.email or (employee.parent_id.work_email if employee.parent_id else False)
+        manager = employee.parent_id.user_id
+        manager_email = (manager.email if manager else False) or (employee.parent_id.work_email if employee.parent_id else False)
         if not manager_email:
             return
 

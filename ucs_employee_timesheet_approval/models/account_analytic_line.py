@@ -42,8 +42,10 @@ class AccountAnalyticLine(models.Model):
             if not employee:
                 continue
             
-            manager = employee.leave_manager_id or employee.parent_id.user_id
-            manager_email = manager.email or (employee.parent_id.work_email if employee.parent_id else False)
+            # Always use Direct Manager (parent_id)
+            manager_user = employee.parent_id.user_id
+            manager_email = (manager_user.email if manager_user else False) or (employee.parent_id.work_email if employee.parent_id else False)
+            manager_name = (manager_user.name if manager_user else False) or (employee.parent_id.name if employee.parent_id else 'Manager')
             if not manager_email:
                 continue
 
@@ -66,7 +68,7 @@ class AccountAnalyticLine(models.Model):
             body_html = f"""
             <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
                 <h3 style="color: #6C5CE7;">Timesheet Approval Request</h3>
-                <p>Dear <strong>{manager.name or 'Manager'}</strong>,</p>
+                <p>Dear <strong>{manager_name}</strong>,</p>
                 <p><strong>{employee.name}</strong> has submitted the following timesheet(s) for your approval:</p>
                 <table style="border-collapse: collapse; width: 100%; margin: 15px 0;">
                     <thead>

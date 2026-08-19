@@ -21,7 +21,7 @@ class LeavePortalApprovals(PortalApprovals):
         if is_admin_or_manager:
             domain = [('state', '=', 'confirm')]
         else:
-            domain = [('state', '=', 'confirm'), ('employee_id.leave_manager_id', '=', user.id)]
+            domain = [('state', '=', 'confirm'), ('employee_id.parent_id.user_id', '=', user.id)]
             
         leaves = Leave.search(domain, order="date_from desc")
         
@@ -45,7 +45,7 @@ class LeavePortalApprovals(PortalApprovals):
         )
 
         if leave.exists() and leave.state == 'confirm':
-            if is_admin_or_manager or leave.employee_id.leave_manager_id.id == user.id:
+            if is_admin_or_manager or leave.employee_id.parent_id.user_id.id == user.id:
                 try:
                     leave.with_user(1).action_approve()
                     return request.redirect('/my/approvals?tab=leave')
@@ -83,7 +83,6 @@ class LeavePortalApprovals(PortalApprovals):
 
         is_authorized = (
             is_admin_or_manager or
-            leave.employee_id.leave_manager_id.id == user.id or
             leave.employee_id.parent_id.user_id.id == user.id or
             leave.employee_id.id in subordinates.ids
         )
