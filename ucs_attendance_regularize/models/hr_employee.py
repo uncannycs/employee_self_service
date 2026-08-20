@@ -7,7 +7,7 @@ _logger = logging.getLogger(__name__)
 class HrEmployee(models.Model):
     _inherit = 'hr.employee'
 
-    regularize_request_assign = fields.Integer(string='Regularization Requests Assigned', default=0)
+    regularize_request_assign = fields.Integer(string='Regularization Requests Assigned', default=3)
     regularize_req_used = fields.Integer(string='Regularization Requests Used', default=0)
 
     @api.model
