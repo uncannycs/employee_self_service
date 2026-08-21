@@ -75,7 +75,7 @@
                 </div>
             </div>
 
-            <div class="ess-hist-body" style="overflow-x: auto; padding: 40px 20px; background: #fafafa; min-height: 400px;">
+            <div class="ess-hist-body" style="overflow-x: auto; width: 100%; padding: 40px 20px; background: #fafafa; min-height: 400px;">
                 <t t-if="top_employee">
                     <div class="org-tree">
                         <ul>

@@ -5,8 +5,10 @@ from odoo.addons.portal.controllers.portal import CustomerPortal
 import urllib.parse
 
 class SubTaskPortal(CustomerPortal):
+    """ Portal controller extension for creating, linking, and unlinking sub-tasks under a parent task. """
 
     def _task_get_page_view_values(self, task, access_token, **kwargs):
+        """ Inject sub-tasks list, count, and creation access permissions into task page context. """
         values = super()._task_get_page_view_values(task, access_token, **kwargs)
         if task:
             values['subtasks'] = task.child_ids.sudo()
@@ -31,6 +33,7 @@ class SubTaskPortal(CustomerPortal):
 
     @http.route(['/my/subtask/create'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_subtask_create(self, **post):
+        """ Handle portal request to link an existing task or create a new sub-task under a parent task. """
         parent_id = post.get('parent_id')
         if not parent_id:
             return request.redirect('/my/projects')
@@ -127,6 +130,7 @@ class SubTaskPortal(CustomerPortal):
 
     @http.route(['/my/subtask/unlink'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_subtask_unlink(self, **post):
+        """ Unlink a sub-task from its parent task in portal. """
         subtask_id = post.get('subtask_id')
         parent_id = post.get('parent_id')
         if not parent_id:

@@ -664,3 +664,32 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
         except Exception:
             year, month, employee_id = None, None, None
         return _get_timesheet_calendar_data(user, year=year, month=month, employee_id=employee_id)
+
+    @http.route(['/my/timesheets/delete/<int:timesheet_id>', '/my/timesheets/delete'], type='http', auth="user", methods=['GET', 'POST'], website=True)
+    def custom_timesheets_delete(self, timesheet_id=None, **post):
+        user = request.env.user
+        ts_id = timesheet_id or post.get('timesheet_id')
+        redirect_to = post.get('redirect_to') or request.httprequest.referrer or '/my/timesheets'
+
+        if ts_id:
+            try:
+                ts_id = int(ts_id)
+                ts = request.env['account.analytic.line'].sudo().browse(ts_id)
+                if ts.exists():
+                    is_owner = (ts.employee_id.user_id.id == user.id) or (ts.create_uid.id == user.id)
+                    is_manager = _is_timesheet_manager(user)
+                    is_draft = (getattr(ts, 'state', 'draft') or 'draft') == 'draft'
+
+                    if (is_owner or is_manager) and is_draft:
+                        ts.sudo().unlink()
+                    elif not is_draft:
+                        import urllib.parse
+                        sep = '&' if '?' in redirect_to else '?'
+                        return request.redirect(f"{redirect_to}{sep}error=" + urllib.parse.quote("Submitted or approved timesheets cannot be deleted."))
+            except Exception as e:
+                import urllib.parse
+                error_msg = str(e).replace('\n', ' ')
+                sep = '&' if '?' in redirect_to else '?'
+                return request.redirect(f"{redirect_to}{sep}error={urllib.parse.quote(error_msg)}")
+
+        return request.redirect(redirect_to)

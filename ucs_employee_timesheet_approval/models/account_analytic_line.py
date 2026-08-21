@@ -3,6 +3,7 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 class AccountAnalyticLine(models.Model):
+    """ Extension of analytic line to introduce timesheet approval workflow states (draft, confirm, approved, refused). """
     _inherit = 'account.analytic.line'
 
     state = fields.Selection([
@@ -16,6 +17,7 @@ class AccountAnalyticLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """ Override create to set approved state for leave-generated timesheet entries automatically. """
         for vals in vals_list:
             if vals.get('holiday_id'):
                 vals['state'] = 'approved'
@@ -26,6 +28,7 @@ class AccountAnalyticLine(models.Model):
         return lines
 
     def action_submit(self):
+        """ Submit draft timesheet entries for manager approval and trigger email notifications. """
         submittable_lines = self.filtered(lambda l: not getattr(l, 'holiday_id', False))
         for line in submittable_lines:
             if line.state != 'draft':
@@ -36,6 +39,7 @@ class AccountAnalyticLine(models.Model):
             submittable_lines._send_timesheet_submit_email_to_manager()
 
     def _send_timesheet_submit_email_to_manager(self):
+        """ Send consolidated email notification to the direct manager for submitted timesheets. """
         from itertools import groupby as py_groupby
         for employee, lines in py_groupby(self.sorted(key=lambda l: l.employee_id.id or 0), key=lambda l: l.employee_id):
             line_list = list(lines)

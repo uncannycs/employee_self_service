@@ -12,6 +12,7 @@ class HrEmployee(models.Model):
 
     @api.model
     def _cron_reset_regularize_requests(self):
+        """ Monthly Cron Job to reset regularization request allocations per employee based on company settings. """
         for company in self.env['res.company'].search([]):
             employees = self.search([('company_id', '=', company.id)])
             employees.write({
@@ -20,6 +21,7 @@ class HrEmployee(models.Model):
             })
 
     def _format_float_time(self, hours):
+        """ Helper utility method to format float hours into HH:MM string representation. """
         h = int(hours or 0)
         m = int(round((hours - h) * 60))
         if m >= 60:
@@ -29,6 +31,7 @@ class HrEmployee(models.Model):
 
     @api.model
     def _cron_send_attendance_shortfall_notifications(self):
+        """ Nightly Cron Job to compute employee attendance shortfalls and send alert emails to direct/indirect managers. """
         today = fields.Date.context_today(self)
         weekday = str(today.weekday())
 
@@ -212,3 +215,11 @@ class HrEmployee(models.Model):
                 mail.send()
             except Exception as e:
                 _logger.error("Failed to send consolidated attendance shortfall report to %s: %s", mgr_email, str(e))
+
+
+class HrEmployeePublic(models.Model):
+    _inherit = 'hr.employee.public'
+
+    regularize_request_assign = fields.Integer(readonly=True)
+    regularize_req_used = fields.Integer(readonly=True)
+    struct_id = fields.Many2one('hr.payroll.structure', readonly=True)

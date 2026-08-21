@@ -7,6 +7,7 @@ from odoo.tools import html2plaintext
 _logger = logging.getLogger(__name__)
 
 class ProjectTask(models.Model):
+    """ Inherit project.task to add custom portal fields (client_deadline, client_allocated_hours) and notification handlers. """
     _inherit = 'project.task'
 
     client_deadline = fields.Date(string="Client Deadline", tracking=True)
@@ -15,6 +16,7 @@ class ProjectTask(models.Model):
 
     @api.depends('description')
     def _compute_description_plain(self):
+        """ Compute plain text version of HTML description for preview rendering. """
         for task in self:
             if task.description:
                 task.description_plain = html2plaintext(task.description).strip()
@@ -23,6 +25,7 @@ class ProjectTask(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """ Override create to auto-notify assigned users and subscribe assigned partners. """
         tasks = super().create(vals_list)
         for task in tasks:
             if task.user_ids:
@@ -31,6 +34,7 @@ class ProjectTask(models.Model):
         return tasks
 
     def write(self, vals):
+        """ Override write to trigger assignment email and follower subscription when assignees change. """
         old_user_ids = {task.id: set(task.user_ids.ids) for task in self} if 'user_ids' in vals else {}
         res = super().write(vals)
         if 'user_ids' in vals:
@@ -43,7 +47,8 @@ class ProjectTask(models.Model):
         return res
 
     def message_subscribe(self, partner_ids=None, subtype_ids=None):
-        old_partners = {task.id: set(task.message_partner_ids.ids) for task in self} if partner_ids else {}
+        """ Override message_subscribe to notify newly added followers via email. """
+        old_partners = {task.id: set(task.sudo().message_partner_ids.ids) for task in self} if partner_ids else {}
         res = super().message_subscribe(partner_ids=partner_ids, subtype_ids=subtype_ids)
         if partner_ids:
             for task in self:
@@ -55,7 +60,7 @@ class ProjectTask(models.Model):
         return res
 
     def message_post(self, body='', subject=None, message_type='notification', subtype_xmlid=None, partner_ids=None, **kwargs):
-        msg = super().message_post(body=body, subject=subject, message_type=message_type, subtype_xmlid=subtype_xmlid, partner_ids=partner_ids, **kwargs)
+        msg = super(ProjectTask, self.sudo()).message_post(body=body, subject=subject, message_type=message_type, subtype_xmlid=subtype_xmlid, partner_ids=partner_ids, **kwargs)
         try:
             self._notify_chatter_and_mentions(msg, body, partner_ids)
         except Exception as e:

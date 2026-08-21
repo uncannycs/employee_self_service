@@ -590,8 +590,11 @@ nav[aria-label="breadcrumb"] {
 .org-tree {
     display: flex;
     justify-content: center;
-    overflow-x: auto;
-    padding: 20px;
+    width: max-content;
+    min-width: 100%;
+    margin: 0 auto;
+    padding: 20px 40px;
+    box-sizing: border-box;
 }
 
 .org-tree ul {
@@ -601,6 +604,7 @@ nav[aria-label="breadcrumb"] {
     list-style: none;
     padding-left: 0;
     margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .org-tree li {
@@ -851,4 +855,40 @@ nav[aria-label="breadcrumb"] {
 
 .ts-group-header-row:hover {
     background: #f3e8ff !important;
+}
+
+/* ── Communication History & Chatter Section Fixes ─────────────── */
+#task_chat {
+    margin-top: 2rem !important;
+    overflow: visible !important;
+    clear: both;
+}
+
+#task_chat h4,
+#task_chat .h4,
+.o_portal_chatter_header,
+.ess-chatter-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    line-height: 1.5 !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 6px !important;
+    overflow: visible !important;
+    display: block !important;
+    color: #475569 !important;
+}
+
+/* Fix for any vertical text clipping across all headings and cards */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.card-title,
+.ess-hist-hero-title,
+.ess-profile-name {
+    line-height: 1.4 !important;
+    overflow: visible !important;
+}
+
+.o_portal_chatter_composer,
+.o_portal_message_thread {
+    overflow: visible !important;
 }

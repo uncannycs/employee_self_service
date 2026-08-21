@@ -17,7 +17,7 @@
             </xpath>
 
             <!-- Add Sub-tasks notebook page in Backend -->
-            <xpath expr="//notebook" position="inside">
+            <!-- <xpath expr="//notebook" position="inside">
                 <page string="Sub-tasks" name="sub_tasks_page">
                     <field name="child_ids" context="{'default_parent_id': id, 'default_project_id': project_id}">
                         <list editable="bottom">
@@ -30,7 +30,7 @@
                         </list>
                     </field>
                 </page>
-            </xpath>
+            </xpath> -->
         </field>
     </record>
 </odoo>

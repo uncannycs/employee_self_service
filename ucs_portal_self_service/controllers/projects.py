@@ -808,7 +808,7 @@ class PortalCustomProjects(ProjectCustomerPortal):
             task = request.env['project.task'].sudo().search([('id', '=', task_id)])
             if task:
                 try:
-                    task.write({'stage_id': stage_id})
+                    task.sudo().write({'stage_id': stage_id})
                     return json.dumps({'success': True})
                 except Exception as e:
                     return json.dumps({'success': False, 'error': str(e)})

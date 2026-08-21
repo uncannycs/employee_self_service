@@ -134,6 +134,7 @@
                                                         <th>Status</th>
                                                     </t>
                                                     <th class="text-right">Hours</th>
+                                                    <th class="text-center" style="width: 60px;">Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -164,12 +165,27 @@
                                                                 </td>
                                                             </t>
                                                             <td class="text-right"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></td>
+                                                            <td class="text-center">
+                                                                <t t-if="is_employee and ts_st == 'draft' and (ts.employee_id.user_id.id == request.env.user.id or ts.create_uid.id == request.env.user.id)">
+                                                                    <form action="/my/timesheets/delete" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this timesheet entry?');">
+                                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                                        <input type="hidden" name="timesheet_id" t-att-value="ts.id"/>
+                                                                        <input type="hidden" name="redirect_to" t-attf-value="/my/tasks/#{task.id}"/>
+                                                                        <button type="submit" class="btn btn-sm btn-outline-danger p-1 border-0" title="Delete Timesheet" style="font-size: 0.95rem; line-height: 1;">
+                                                                            <i class="fa fa-trash-o"/>
+                                                                        </button>
+                                                                    </form>
+                                                                </t>
+                                                                <t t-else="">
+                                                                    <span class="text-muted">-</span>
+                                                                </t>
+                                                            </td>
                                                         </tr>
                                                     </t>
                                                 </t>
                                                 <t t-else="">
                                                     <tr>
-                                                        <td t-att-colspan="5 if is_employee else 4" class="text-center text-muted font-italic py-4">
+                                                        <td t-att-colspan="6 if is_employee else 5" class="text-center text-muted font-italic py-4">
                                                             No timesheets logged for this task yet.
                                                         </td>
                                                     </tr>
@@ -323,8 +339,8 @@
                 </script>
 
                 <!-- Chatter / Communication History Section -->
-                <div id="task_chat" class="mt-4" data-anchor="true">
-                    <h4 class="text-muted"><i class="fa fa-comments"/> Communication History</h4>
+                <div id="task_chat" class="mt-4" data-anchor="true" style="overflow: visible;">
+                    <h4 class="text-muted mb-3" style="line-height: 1.5; padding-bottom: 4px; overflow: visible; display: block;"><i class="fa fa-comments me-2"/> Communication History</h4>
                     <t t-call="portal.message_thread">
                         <t t-set="object" t-value="task"/>
                         <t t-set="token" t-value="task.access_token"/>

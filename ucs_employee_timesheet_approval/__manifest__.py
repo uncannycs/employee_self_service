@@ -9,7 +9,7 @@
         to base timesheet lines and provides a manager approval interface in the portal.
     """,
     'author': 'UCS',
-    'depends': ['hr_timesheet', 'account', 'ucs_portal_self_service'],
+    'depends': ['hr_timesheet', 'account', 'ucs_portal_self_service', 'hr_holidays', 'project_timesheet_holidays'],
     'data': [
         'security/security_groups.xml',
         'data/ir_cron_data.xml',

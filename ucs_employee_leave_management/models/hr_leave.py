@@ -5,10 +5,12 @@ import logging
 _logger = logging.getLogger(__name__)
 
 class HrLeave(models.Model):
+    """ Custom extension of hr.leave to automate emails and sync timesheet approval states. """
     _inherit = 'hr.leave'
 
     @api.model_create_multi
     def create(self, vals_list):
+        """ Override create to send leave request email to manager and auto-approve past date leaves. """
         leaves = super(HrLeave, self).create(vals_list)
         today = fields.Date.today()
         now = fields.Datetime.now()
@@ -25,6 +27,7 @@ class HrLeave(models.Model):
         return leaves
 
     def action_approve(self, *args, **kwargs):
+        """ Override action_approve to send notification email to employee and mark generated timesheets approved. """
         res = super(HrLeave, self).action_approve(*args, **kwargs)
         for leave in self:
             leave._send_leave_approval_email_to_employee()
@@ -34,6 +37,7 @@ class HrLeave(models.Model):
         return res
 
     def action_validate(self, *args, **kwargs):
+        """ Override action_validate to ensure linked timesheets state is set to approved. """
         res = super(HrLeave, self).action_validate(*args, **kwargs) if hasattr(super(HrLeave, self), 'action_validate') else True
         for leave in self:
             timesheets = self.env['account.analytic.line'].sudo().search([('holiday_id', '=', leave.id)])
@@ -42,11 +46,13 @@ class HrLeave(models.Model):
         return res
 
     def _track_subtype(self, init_values):
+        """ Override track subtype to suppress standard chatter tracking when validated. """
         if 'state' in init_values and self.state in ['validate', 'validate1']:
             return False
         return super(HrLeave, self)._track_subtype(init_values)
 
     def action_refuse(self, *args, **kwargs):
+        """ Override action_refuse to send rejection email to employee and remove generated leave timesheets. """
         res = super(HrLeave, self).action_refuse(*args, **kwargs)
         for leave in self:
             leave._send_leave_refuse_email_to_employee()
@@ -56,6 +62,7 @@ class HrLeave(models.Model):
         return res
 
     def write(self, vals):
+        """ Override write to sync timesheet states when leave state changes. """
         res = super(HrLeave, self).write(vals)
         if 'state' in vals:
             if vals['state'] in ['validate', 'validate1']:

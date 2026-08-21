@@ -239,9 +239,16 @@
                                                         </button>
                                                     </t>
                                                     <t t-if="ts.state == 'draft'">
-                                                        <a t-attf-href="/my/timesheets/submit/{{ ts.id }}" class="btn btn-sm btn-primary" title="Submit">
+                                                        <a t-attf-href="/my/timesheets/submit/{{ ts.id }}" class="btn btn-sm btn-primary me-1" title="Submit">
                                                             <i class="fa fa-paper-plane"></i> Submit
                                                         </a>
+                                                        <form action="/my/timesheets/delete" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this timesheet entry?');">
+                                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                            <input type="hidden" name="timesheet_id" t-att-value="ts.id"/>
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                                <i class="fa fa-trash-o"></i>
+                                                            </button>
+                                                        </form>
                                                     </t>
                                                     <t t-if="ts.state == 'confirm' and is_timesheet_manager and (not ts.employee_id or not ts.employee_id.user_id or ts.employee_id.user_id.id != request.env.user.id) and (not ts.user_id or ts.user_id.id != request.env.user.id)">
                                                         <a t-attf-href="/my/timesheets/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">

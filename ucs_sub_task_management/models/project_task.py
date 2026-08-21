@@ -2,6 +2,7 @@
 from odoo import models, fields, api, _
 
 class ProjectTask(models.Model):
+    """ Custom extension for Sub-Task management, computing subtask counts and allocated/effective hours. """
     _inherit = 'project.task'
 
     developer_allocated_hours = fields.Float(
@@ -29,11 +30,13 @@ class ProjectTask(models.Model):
 
     @api.depends('child_ids')
     def _compute_custom_subtask_count(self):
+        """ Compute total number of sub-tasks under this parent task. """
         for task in self:
             task.subtask_count = len(task.child_ids)
 
     @api.depends('child_ids', 'child_ids.allocated_hours', 'child_ids.developer_allocated_hours', 'child_ids.effective_hours', 'child_ids.timesheet_ids.unit_amount')
     def _compute_subtask_hours(self):
+        """ Compute aggregate allocated and logged hours across all child sub-tasks. """
         for task in self:
             tot_alloc = 0.0
             tot_eff = 0.0
@@ -44,6 +47,7 @@ class ProjectTask(models.Model):
             task.subtask_effective_hours = tot_eff
 
     def action_open_subtasks(self):
+        """ Action to open list/kanban view of sub-tasks linked to this task. """
         self.ensure_one()
         return {
             'name': _('Sub-tasks'),

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import html
 from odoo import models, fields
 from markupsafe import Markup
 
@@ -24,22 +25,16 @@ class ProjectTask(models.Model):
         # ── @mention processing ───────────────────────────────────────────────
         if body and not self.env.context.get('skip_task_forwarding'):
             possible_partners = (
-                self.user_ids.mapped('partner_id') | self.message_partner_ids
+                self.sudo().user_ids.mapped('partner_id') | self.sudo().message_partner_ids
             )
-            mentioned_partner_ids = list(kwargs.get('partner_ids', []))
+            mentioned_partner_ids = list(kwargs.get('partner_ids') or [])
 
             for partner in possible_partners:
                 mention_str = f"@{partner.name}"
-                if mention_str in body:
-                    html_mention = (
-                        f'<a href="#" class="o_mail_redirect" data-oe-model="res.partner"'
-                        f' data-oe-id="{partner.id}">@{partner.name}</a>'
-                    )
-                    body = body.replace(mention_str, html_mention)
+                if mention_str in str(body):
                     if partner.id not in mentioned_partner_ids:
                         mentioned_partner_ids.append(partner.id)
 
-            kwargs['body'] = Markup(body) if isinstance(body, str) else body
             kwargs['partner_ids'] = mentioned_partner_ids
 
         message = super(ProjectTask, self).message_post(**kwargs)

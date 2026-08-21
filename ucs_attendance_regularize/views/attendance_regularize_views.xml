@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- List View -->
+    <!-- List View: Displays all attendance regularization requests submitted by employees -->
     <record id="view_attendance_regularize_list" model="ir.ui.view">
         <field name="name">attendance.regularize.list</field>
         <field name="model">attendance.regularize</field>

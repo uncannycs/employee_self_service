@@ -6,9 +6,11 @@ import pytz
 import urllib.parse
 
 class AttendanceRegularizeController(http.Controller):
+    """ Controller handling attendance regularization requests from portal user. """
 
     @http.route(['/my/attendance/regularize_request'], type='http', auth="user", website=True, methods=['POST'])
     def submit_regularize_request(self, **post):
+        """ Validate and create an attendance regularization request submitted by an employee. """
         user = request.env.user
         employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
 

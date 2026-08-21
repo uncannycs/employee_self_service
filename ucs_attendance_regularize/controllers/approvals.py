@@ -5,7 +5,10 @@ from datetime import timedelta
 import urllib.parse
 
 class RegularizePortalApprovals(PortalApprovals):
+    """ Controller extending portal approvals tab for Attendance Regularization requests. """
+
     def _prepare_approvals_values(self):
+        """ Inject pending attendance regularization approval requests into the approvals dashboard context. """
         values = super()._prepare_approvals_values()
         user = request.env.user
 
@@ -39,6 +42,7 @@ class RegularizePortalApprovals(PortalApprovals):
 
     @http.route('/my/approvals/regularize/approve/<int:req_id>', type='http', auth="user", website=True)
     def approve_regularize(self, req_id, **kw):
+        """ Approve an attendance regularization request (Manager or HR Admin level). """
         user = request.env.user
         is_manager = user.has_group('ucs_attendance_regularize.group_attendance_regularize_manager')
         is_admin = user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin')
@@ -108,6 +112,7 @@ class RegularizePortalApprovals(PortalApprovals):
 
     @http.route('/my/approvals/regularize/reject/<int:req_id>', type='http', auth="user", website=True)
     def reject_regularize(self, req_id, **kw):
+        """ Reject an attendance regularization request and restore request count limit. """
         user = request.env.user
         is_manager = user.has_group('ucs_attendance_regularize.group_attendance_regularize_manager')
         is_admin = user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin')

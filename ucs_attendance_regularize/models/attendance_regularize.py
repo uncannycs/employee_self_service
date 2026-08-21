@@ -44,6 +44,7 @@ class AttendanceRegularize(models.Model):
     hr_admin_emails = fields.Char(string='HR Admin Emails', compute='_compute_hr_admin_emails')
 
     def _compute_manager_email(self):
+        """ Compute the direct manager's work or user email for notification purposes. """
         for rec in self:
             if rec.manager_id:
                 rec.manager_email = rec.manager_id.work_email or (rec.manager_id.user_id.email if rec.manager_id.user_id else '')
@@ -51,6 +52,7 @@ class AttendanceRegularize(models.Model):
                 rec.manager_email = ''
 
     def _compute_hr_admin_emails(self):
+        """ Compute the HR responsible user's email address for approval notifications. """
         for rec in self:
             rec.hr_admin_emails = ''
             if rec.hr_id:
@@ -65,6 +67,7 @@ class AttendanceRegularize(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """ Override create to assign sequence number, direct manager, and HR responsible user. """
         for vals in vals_list:
             if vals.get('name', 'New') == 'New':
                 vals['name'] = self.env['ir.sequence'].next_by_code('attendance.regularize') or 'New'
