@@ -430,7 +430,7 @@ class PortalCustomProjects(ProjectCustomerPortal):
         values = super()._project_get_page_view_values(project, access_token, page=page, date_begin=date_begin, date_end=date_end, sortby=order, search=search, search_in=search_in, groupby='none', **kwargs)
         
         Task = request.env['project.task']
-        domain = [('project_id', '=', project.id)]
+        domain = [('project_id', '=', project.id), ('display_in_project', '=', True)]
 
         if filterby in filters and filters[filterby].get('domain'):
             domain += filters[filterby]['domain']

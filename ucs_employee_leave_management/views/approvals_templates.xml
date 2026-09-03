@@ -21,76 +21,90 @@
                         <h4 class="mb-3 px-3 pt-3" style="color: var(--ess-primary);"><i class="fa fa-hourglass-half"/> Pending Approvals</h4>
                         <table class="ess-hist-table">
                             <thead>
-                                <tr>
-                                    <th>Employee</th>
-                                    <th>Date From</th>
-                                    <th>Date To</th>
-                                    <th>Leave Type</th>
-                                    <th>Days</th>
-                                    <th>Status</th>
-                                    <th class="text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-if="leaves">
-                                    <t t-foreach="leaves" t-as="leave">
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <img t-attf-src="/web/image/hr.employee/{{ leave.employee_id.id }}/avatar_128" 
-                                                         style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
-                                                    <span class="font-weight-bold text-dark"><t t-esc="leave.employee_id.name"/></span>
-                                                </div>
-                                            </td>
-                                            <td class="font-weight-bold"><t t-esc="leave.request_date_from.strftime('%d/%m/%Y') if leave.request_date_from else ''"/></td>
-                                            <td class="font-weight-bold"><t t-esc="leave.request_date_to.strftime('%d/%m/%Y') if leave.request_date_to else ''"/></td>
-                                            <td>
-                                                <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
-                                            </td>
-                                            <td>
-                                                <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
-                                                    <t t-esc="int(round((leave.number_of_hours or (leave.number_of_days * 8.0)) * 60))"/> min
-                                                </t>
-                                                <t t-elif="leave.request_unit_half">
-                                                    <t t-esc="leave.number_of_days"/>
-                                                    <small class="text-muted d-block">
-                                                        (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
-                                                    </small>
-                                                </t>
-                                                <t t-else="">
-                                                    <t t-esc="leave.number_of_days"/>
-                                                </t>
-                                            </td>
-                                            <td>
-                                                <t t-if="leave.state in ['validate', 'validate1']">
-                                                    <span class="badge bg-success text-white">Approved</span>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="badge bg-warning text-white">To Approve</span>
-                                                </t>
-                                            </td>
-                                            <td class="text-center">
-                                                <t t-if="leave.state == 'confirm'">
-                                                    <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
-                                                        <i class="fa fa-check"/> Approve
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th>Date From</th>
+                                        <th>Date To</th>
+                                        <th>Leave Type</th>
+                                        <th>Days</th>
+                                        <th>Attachment</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-if="leaves">
+                                        <t t-foreach="leaves" t-as="leave">
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <img t-attf-src="/web/image/hr.employee/#{leave.employee_id.id}/avatar_128" 
+                                                             style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
+                                                        <span class="font-weight-bold text-dark"><t t-esc="leave.employee_id.name"/></span>
+                                                    </div>
+                                                </td>
+                                                <td class="font-weight-bold"><t t-esc="leave.request_date_from.strftime('%d/%m/%Y') if leave.request_date_from else ''"/></td>
+                                                <td class="font-weight-bold"><t t-esc="leave.request_date_to.strftime('%d/%m/%Y') if leave.request_date_to else ''"/></td>
+                                                <td>
+                                                    <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
+                                                </td>
+                                                <td>
+                                                    <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
+                                                        <t t-esc="int(round((leave.number_of_hours or (leave.number_of_days * 8.0)) * 60))"/> min
+                                                    </t>
+                                                    <t t-elif="leave.request_unit_half">
+                                                        <t t-esc="leave.number_of_days"/>
+                                                        <small class="text-muted d-block">
+                                                            (<t t-esc="'Morning' if leave.request_date_from_period == 'am' else 'Afternoon'"/>)
+                                                        </small>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="leave.number_of_days"/>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-set="leave_atts" t-value="leave.supported_attachment_ids or leave.attachment_ids or request.env['ir.attachment'].sudo().search([('res_model', '=', 'hr.leave'), ('res_id', '=', leave.id)])"/>
+                                                    <t t-if="leave_atts">
+                                                        <t t-foreach="leave_atts" t-as="att">
+                                                            <a t-attf-href="/my/leaves/attachment/#{att.id}" class="btn btn-sm btn-outline-primary shadow-sm me-1 mb-1" style="border-radius: 6px; font-size: 0.78rem;" t-att-title="att.name" target="_blank">
+                                                                <i class="fa fa-paperclip me-1"/> <t t-esc="att.name[:14] + '...' if len(att.name) &gt; 16 else att.name"/>
+                                                            </a>
+                                                        </t>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="text-muted small">-</span>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="leave.state in ['validate', 'validate1']">
+                                                        <span class="badge bg-success text-white">Approved</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="badge bg-warning text-white">To Approve</span>
+                                                    </t>
+                                                </td>
+                                                <td class="text-center">
+                                                    <t t-if="leave.state == 'confirm'">
+                                                        <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
+                                                            <i class="fa fa-check"/> Approve
+                                                        </a>
+                                                    </t>
+                                                    <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse/reject this leave request?');" title="Refuse">
+                                                        <i class="fa fa-times"/> Refuse / Reject
                                                     </a>
-                                                </t>
-                                                <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse/reject this leave request?');" title="Refuse">
-                                                    <i class="fa fa-times"/> Refuse / Reject
-                                                </a>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <tr>
+                                            <td colspan="8" class="ess-empty-row">
+                                                <i class="fa fa-check-circle-o fa-2x"/>
+                                                <div>No pending approvals found. You're all caught up!</div>
                                             </td>
                                         </tr>
                                     </t>
-                                </t>
-                                <t t-else="">
-                                    <tr>
-                                        <td colspan="7" class="ess-empty-row">
-                                            <i class="fa fa-check-circle-o fa-2x"/>
-                                            <div>No pending approvals found. You're all caught up!</div>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>

@@ -119,6 +119,33 @@ class AccountAnalyticLine(models.Model):
     def action_refuse(self, reason=''):
         for line in self.filtered(lambda l: not getattr(l, 'holiday_id', False)):
             line.write({'state': 'refused', 'reject_reason': reason})
+            emp_email = line.employee_id.work_email or (line.employee_id.user_id.email if line.employee_id.user_id else False)
+            if emp_email:
+                try:
+                    base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+                    ts_url = f"{base_url}/my/timesheets"
+                    subject = f"[Timesheet Refused] Timesheet entry for {line.date} requires resubmission"
+                    body = f"""
+                    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
+                        <h3 style="color: #EF4444;">Timesheet Entry Refused</h3>
+                        <p>Dear <strong>{line.employee_id.name}</strong>,</p>
+                        <p>Your timesheet entry for <strong>{line.date}</strong> on project <strong>{line.project_id.name or ''}</strong> ({line.unit_amount:.2f} hrs) was refused by your manager.</p>
+                        <p style="background: #FEE2E2; border-left: 4px solid #EF4444; padding: 10px; margin: 15px 0;">
+                            <strong>Refusal Remark:</strong> {reason or 'No specific reason provided.'}
+                        </p>
+                        <p><a href="{ts_url}" style="background-color: #EF4444; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">Update & Resubmit Timesheet</a></p>
+                    </div>
+                    """
+                    mail = self.env['mail.mail'].sudo().create({
+                        'subject': subject,
+                        'email_from': self.env.company.email or self.env.user.email_formatted or 'noreply@company.com',
+                        'email_to': emp_email,
+                        'body_html': body,
+                        'state': 'outgoing',
+                    })
+                    mail.send()
+                except Exception:
+                    pass
 
     def action_reset_draft(self):
         for line in self.filtered(lambda l: not getattr(l, 'holiday_id', False)):
@@ -126,12 +153,12 @@ class AccountAnalyticLine(models.Model):
 
     # Prevent editing/deleting if not in draft
     def write(self, vals):
-        # Allow state change regardless of state
-        if len(vals) == 1 and ('state' in vals or 'reject_reason' in vals):
+        # Allow state change or reject reason update regardless of current state
+        if 'state' in vals or 'reject_reason' in vals or self.env.su:
             return super(AccountAnalyticLine, self).write(vals)
             
         for line in self:
-            if line.state in ['approved', 'refused'] and not self.env.su:
+            if line.state in ['approved', 'refused']:
                 raise UserError(_("You cannot modify an approved or refused timesheet."))
         return super(AccountAnalyticLine, self).write(vals)
 

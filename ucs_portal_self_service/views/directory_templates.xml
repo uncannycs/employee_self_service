@@ -5,8 +5,8 @@
         <li>
             <t t-set="active_children" t-value="emp.child_ids.filtered(lambda c: c.active)"/>
             <div t-attf-class="org-card #{'is-current' if emp.id == current_employee.id else ''}">
-                <t t-if="emp.image_128">
-                    <img t-attf-src="/web/image/hr.employee/{{ emp.id }}/image_128" t-att-alt="emp.name"/>
+                <t t-if="emp.image_128 or emp.avatar_128">
+                    <img t-att-src="image_data_uri(emp.avatar_128 or emp.image_128)" t-att-alt="emp.name"/>
                 </t>
                 <t t-else="">
                     <div class="org-avatar-fallback">
@@ -20,7 +20,15 @@
                 </t>
                 
                 <div class="org-details">
-                    <div class="org-name"><t t-esc="emp.name"/></div>
+                    <div class="org-name">
+                        <t t-esc="emp.name"/>
+                        <t t-if="emp.attendance_state == 'checked_in'">
+                            <span class="badge bg-success rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0;" title="Checked In (Working)"></span>
+                        </t>
+                        <t t-else="">
+                            <span class="badge bg-secondary rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0; opacity: 0.5;" title="Checked Out"></span>
+                        </t>
+                    </div>
                     <t t-if="emp.work_email">
                         <div class="org-email" style="font-size: 0.75rem; color: #64748b; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><t t-esc="emp.work_email"/></div>
                     </t>

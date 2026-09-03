@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
+import base64
+import urllib.parse
 from odoo import http, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal
-import urllib.parse
 
 def _get_employee(user):
     employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
@@ -38,20 +38,53 @@ class PortalCustomProfile(CustomerPortal):
             return request.redirect('/my/dashboard')
 
         try:
-            # We only allow updating specific non-sensitive fields
+            update_vals = {}
+            partner_vals = {}
+
+            # Handle Profile Image File Upload & Deletion
+            delete_profile_image = post.get('delete_profile_image')
+            profile_image = post.get('profile_image') or request.httprequest.files.get('profile_image')
+
+            if delete_profile_image == '1':
+                employee.sudo().write({'image_1920': False})
+                if user.partner_id:
+                    user.partner_id.sudo().write({'image_1920': False})
+                user.sudo().write({'image_1920': False})
+            elif profile_image and getattr(profile_image, 'filename', False):
+                image_data = profile_image.read()
+                if image_data:
+                    base64_str = base64.b64encode(image_data).decode('utf-8')
+                    employee.sudo().write({'image_1920': base64_str})
+                    if user.partner_id:
+                        user.partner_id.sudo().write({'image_1920': base64_str})
+                    user.sudo().write({'image_1920': base64_str})
+
+            # Phone numbers
+            work_phone = post.get('work_phone')
+            mobile_phone = post.get('mobile_phone')
             emergency_contact = post.get('emergency_contact')
             emergency_phone = post.get('emergency_phone')
-            
-            update_vals = {}
+
+            if work_phone is not None:
+                update_vals['work_phone'] = work_phone
+                partner_vals['phone'] = work_phone
+            if mobile_phone is not None:
+                update_vals['mobile_phone'] = mobile_phone
+                partner_vals['mobile'] = mobile_phone
             if emergency_contact is not None:
                 update_vals['emergency_contact'] = emergency_contact
             if emergency_phone is not None:
                 update_vals['emergency_phone'] = emergency_phone
-                
+
             if update_vals:
                 employee.sudo().write(update_vals)
-                
-            return request.redirect('/my/profile?success=Profile updated successfully.')
+                if user.partner_id and partner_vals:
+                    valid_partner_fields = request.env['res.partner']._fields
+                    safe_partner_vals = {k: v for k, v in partner_vals.items() if k in valid_partner_fields}
+                    if safe_partner_vals:
+                        user.partner_id.sudo().write(safe_partner_vals)
+
+            return request.redirect('/my/profile?success=Profile details updated successfully.')
             
         except Exception as e:
             import logging

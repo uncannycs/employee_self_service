@@ -40,7 +40,7 @@
         <xpath expr="." position="inside">
             <t t-if="request.env.user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_manager')">
                 <div t-att-class="'tab-pane fade ' + ('show active' if request.params.get('tab') == 'timesheet' else '')" id="timesheet" role="tabpanel">
-                    
+
                     <t t-if="not filter_employees">
                         <div class="text-center py-5">
                             <i class="fa fa-calendar-check-o text-muted mb-3" style="font-size: 4rem; opacity: 0.5;"></i>
@@ -48,15 +48,14 @@
                             <p class="text-muted">You're all caught up!</p>
                         </div>
                     </t>
-                    
+
                     <t t-if="filter_employees">
+                        <!-- Filters (GET form) -->
                         <div class="mb-2 px-3 pt-3">
                             <form method="get" action="/my/approvals" class="d-flex justify-content-between align-items-center flex-wrap">
                                 <input type="hidden" name="tab" value="timesheet"/>
-                                
-                                <!-- Filters -->
                                 <div class="d-flex gap-2 align-items-center mb-2">
-                                    <span class="text-muted small fw-bold me-1"><i class="fa fa-filter"></i> Filters:</span>
+                                    <span class="text-muted small fw-bold me-1"><i class="fa fa-filter"/> Filters:</span>
                                     <select name="filter_employee" class="form-select form-select-sm" onchange="this.form.submit()" style="max-width: 150px;">
                                         <option value="">All Employees</option>
                                         <t t-foreach="filter_employees" t-as="emp">
@@ -71,8 +70,7 @@
                                     </select>
                                     <input type="date" name="filter_date_from" class="form-control form-control-sm" t-att-value="current_filter_date_from" onchange="this.form.submit()" style="max-width: 130px;" title="From Date"/>
                                     <input type="date" name="filter_date_to" class="form-control form-control-sm" t-att-value="current_filter_date_to" onchange="this.form.submit()" style="max-width: 130px;" title="To Date"/>
-                                    
-                                    <a t-if="current_filter_employee or current_filter_project or current_filter_date_from or current_filter_date_to" 
+                                    <a t-if="current_filter_employee or current_filter_project or current_filter_date_from or current_filter_date_to"
                                        href="#" onclick="
                                             this.form.filter_employee.value='';
                                             this.form.filter_project.value='';
@@ -80,21 +78,44 @@
                                             this.form.filter_date_to.value='';
                                             this.form.submit(); return false;
                                        " class="btn btn-sm btn-outline-danger" title="Clear Filters">
-                                        <i class="fa fa-times"></i>
+                                        <i class="fa fa-times"/>
                                     </a>
                                 </div>
                             </form>
                         </div>
+
                         <t t-if="not timesheets">
                             <div class="alert alert-info mx-3 mt-3 text-center" role="alert">
-                                <i class="fa fa-info-circle me-2"></i> No timesheets found matching your filters.
+                                <i class="fa fa-info-circle me-2"/> No timesheets found matching your filters.
                             </div>
                         </t>
+
                         <t t-if="timesheets">
+                            <!-- Bulk action toolbar — NO FORM, uses fetch() JSON-RPC -->
+                            <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="checkbox" id="selectAllTs" class="form-check-input"
+                                        onclick="(function(el){var cbs=document.querySelectorAll('.ts-select-cb');for(var i=0;i&lt;cbs.length;i++)cbs[i].checked=el.checked;})(this)"/>
+                                    <label for="selectAllTs" class="form-check-label small font-weight-bold mb-0 text-dark">Select All</label>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-success"
+                                        onclick="window._tsApproveSelected()">
+                                        <i class="fa fa-check-circle me-1"/> Approve Selected
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                        onclick="window._tsRefuseSelected()">
+                                        <i class="fa fa-times-circle me-1"/> Refuse Selected
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Timesheet table -->
                             <div class="ess-hist-table-wrap">
                                 <table class="ess-hist-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 40px;"/>
                                             <th>Employee</th>
                                             <th>Date</th>
                                             <th>Project</th>
@@ -105,86 +126,145 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <t t-foreach="grouped_timesheets" t-as="group_data">
-                                            <t t-set="group_key" t-value="group_data[0]"/>
-                                            <t t-set="ts_lines" t-value="group_data[1]"/>
-                                            
-                                            <!-- Group Header -->
-                                            <tr class="table-light font-weight-bold" style="background: var(--ess-light); color: var(--ess-primary);">
-                                                <td colspan="7">
-                                                    <div class="d-flex align-items-center">
-                                                        <t t-if="group_key.image_128">
-                                                            <img t-att-src="image_data_uri(group_key.image_128)" class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Employee"/>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <div class="rounded-circle mr-2 d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 24px; height: 24px;">
-                                                                <i class="fa fa-user" style="font-size: 10px;"></i>
+                                    <t t-foreach="grouped_timesheets" t-as="group_data">
+                                        <t t-set="group_key" t-value="group_data[0]"/>
+                                        <t t-set="ts_lines" t-value="group_data[1]"/>
+
+                                        <!-- Group Header -->
+                                        <tr class="table-light font-weight-bold" style="background: var(--ess-light); color: var(--ess-primary);">
+                                            <td colspan="7">
+                                                <div class="d-flex align-items-center">
+                                                    <t t-if="group_key.image_128">
+                                                        <img t-att-src="image_data_uri(group_key.image_128)" class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Employee"/>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <div class="rounded-circle mr-2 d-flex align-items-center justify-content-center bg-secondary text-white" style="width: 24px; height: 24px;">
+                                                            <i class="fa fa-user" style="font-size: 10px;"/>
+                                                        </div>
+                                                    </t>
+                                                    <span t-esc="group_key.name"/>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Timesheet Rows -->
+                                        <t t-foreach="ts_lines" t-as="ts">
+                                            <tr>
+                                                <td class="text-center">
+                                                    <t t-if="not ts.holiday_id">
+                                                        <input type="checkbox" t-att-value="ts.id" class="form-check-input ts-select-cb"/>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="ts.employee_id.image_128">
+                                                        <img t-att-src="image_data_uri(ts.employee_id.image_128)" class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Employee"/>
+                                                    </t>
+                                                    <span t-esc="ts.employee_id.name"/>
+                                                </td>
+                                                <td><t t-esc="ts.date"/></td>
+                                                <td>
+                                                    <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
+                                                </td>
+                                                <td>
+                                                    <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
+                                                </td>
+                                                <td>
+                                                    <span class="ess-hrs-val"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></span>
+                                                </td>
+                                                <td><t t-esc="ts.name"/></td>
+                                                <td class="text-end">
+                                                    <t t-if="not ts.holiday_id">
+                                                        <a t-attf-href="/my/approvals/timesheet/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">
+                                                            <i class="fa fa-check"/> Approve
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" t-attf-data-bs-target="#refuseModal_{{ ts.id }}" title="Refuse">
+                                                            <i class="fa fa-times"/> Refuse
+                                                        </button>
+
+                                                        <!-- Per-row Refuse Modal -->
+                                                        <div class="modal fade" t-attf-id="refuseModal_{{ ts.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                                            <div class="modal-dialog" role="document">
+                                                                <div class="modal-content text-start">
+                                                                    <div class="modal-header">
+                                                                        <h5 class="modal-title">Refuse Timesheet</h5>
+                                                                    </div>
+                                                                    <div class="modal-body">
+                                                                        <p>Specify reason for refusing timesheet line for <strong><t t-esc="ts.employee_id.name"/></strong> on <strong><t t-esc="ts.date"/></strong>:</p>
+                                                                        <textarea t-attf-id="refuse_reason_{{ ts.id }}" class="form-control" rows="3" placeholder="Enter reason..." required="1"></textarea>
+                                                                    </div>
+                                                                    <div class="modal-footer">
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                        <a href="#" t-attf-onclick="var r=document.getElementById('refuse_reason_{{ ts.id }}').value; window.location.href='/my/approvals/timesheet/refuse/{{ ts.id }}?reject_reason='+encodeURIComponent(r); return false;" class="btn btn-danger">Confirm Refuse</a>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </t>
-                                                        <span t-esc="group_key.name"/>
-                                                    </div>
+                                                        </div>
+                                                    </t>
                                                 </td>
                                             </tr>
-                                            
-                                            <!-- Timesheet Rows -->
-                                            <t t-foreach="ts_lines" t-as="ts">
-                                                <tr>
-                                                    <td>
-                                                        <t t-if="ts.employee_id.image_128">
-                                                            <img t-att-src="image_data_uri(ts.employee_id.image_128)" class="rounded-circle mr-2" style="width: 24px; height: 24px; object-fit: cover;" alt="Employee"/>
-                                                        </t>
-                                                        <span t-esc="ts.employee_id.name"/>
-                                                    </td>
-                                                    <td><t t-esc="ts.date"/></td>
-                                                    <td>
-                                                        <span class="badge badge-light text-primary"><t t-esc="ts.project_id.name if ts.project_id else ''"/></span>
-                                                    </td>
-                                                    <td>
-                                                        <span class="text-muted"><t t-esc="ts.task_id.name if ts.task_id else ''"/></span>
-                                                    </td>
-                                                    <td>
-                                                        <span class="ess-hrs-val"><t t-esc="ts.unit_amount" t-options='{"widget": "float_time"}'/></span>
-                                                    </td>
-                                                    <td><t t-esc="ts.name"/></td>
-                                                     <td class="text-end">
-                                                         <t t-if="not ts.holiday_id">
-                                                             <a t-attf-href="/my/approvals/timesheet/approve/{{ ts.id }}" class="btn btn-sm btn-success me-1" title="Approve">
-                                                                 <i class="fa fa-check"></i> Approve
-                                                             </a>
-                                                             <button class="btn btn-sm btn-danger" data-bs-toggle="modal" t-attf-data-bs-target="#refuseModal_{{ ts.id }}" title="Refuse">
-                                                                 <i class="fa fa-times"></i> Refuse
-                                                             </button>
-                                                             
-                                                             <!-- Refuse Modal -->
-                                                             <div class="modal fade" t-attf-id="refuseModal_{{ ts.id }}" tabindex="-1" role="dialog" aria-hidden="true">
-                                                                 <div class="modal-dialog" role="document">
-                                                                     <div class="modal-content text-start">
-                                                                         <form t-attf-action="/my/approvals/timesheet/refuse/{{ ts.id }}" method="post">
-                                                                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                                                             
-                                                                             <div class="modal-header">
-                                                                                 <h5 class="modal-title">Refuse Timesheet</h5>
-                                                                             </div>
-                                                                             <div class="modal-body">
-                                                                                 <p>Specify reason for refusing timesheet line for <strong><t t-esc="ts.employee_id.name"/></strong> on <strong><t t-esc="ts.date"/></strong>:</p>
-                                                                                 <textarea name="reason" class="form-control" rows="3" placeholder="Enter reason..." required="1"></textarea>
-                                                                             </div>
-                                                                             <div class="modal-footer">
-                                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                                 <button type="submit" class="btn btn-danger">Confirm Refuse</button>
-                                                                             </div>
-                                                                         </form>
-                                                                     </div>
-                                                                 </div>
-                                                             </div>
-                                                         </t>
-                                                     </td>
-                                                </tr>
-                                            </t>
                                         </t>
+                                    </t>
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Bulk action JS — inline at bottom of timesheets block, always executes immediately -->
+                            <script type="text/javascript">
+                                (function() {
+                                    function _tsGetSelectedIds() {
+                                        var cbs = document.querySelectorAll('.ts-select-cb:checked');
+                                        var ids = [];
+                                        for (var i = 0; i &lt; cbs.length; i++) {
+                                            ids.push(parseInt(cbs[i].value));
+                                        }
+                                        return ids;
+                                    }
+
+                                    function _tsBulkCall(action, ids, reason) {
+                                        fetch('/my/approvals/timesheet/bulk_action', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({
+                                                jsonrpc: '2.0',
+                                                method: 'call',
+                                                id: 1,
+                                                params: {action: action, timesheet_ids: ids, reason: reason}
+                                            })
+                                        }).then(function(r) {
+                                            return r.json();
+                                        }).then(function(data) {
+                                            if (data.result &amp;&amp; data.result.success) {
+                                                window.location.href = '/my/approvals?tab=timesheet';
+                                            } else {
+                                                alert('Action failed. Please refresh and try again.');
+                                            }
+                                        }).catch(function(e) {
+                                            alert('Error: ' + e.message);
+                                        });
+                                    }
+
+                                    window._tsApproveSelected = function() {
+                                        var ids = _tsGetSelectedIds();
+                                        if (ids.length === 0) {
+                                            alert('Please select at least one timesheet entry to approve.');
+                                            return;
+                                        }
+                                        if (!confirm('Approve ' + ids.length + ' selected timesheet(s)?')) return;
+                                        _tsBulkCall('approve', ids, '');
+                                    };
+
+                                    window._tsRefuseSelected = function() {
+                                        var ids = _tsGetSelectedIds();
+                                        if (ids.length === 0) {
+                                            alert('Please select at least one timesheet entry to refuse.');
+                                            return;
+                                        }
+                                        var reason = prompt('Enter refusal reason for ' + ids.length + ' selected timesheet(s):');
+                                        if (reason === null || reason.trim() === '') return;
+                                        _tsBulkCall('refuse', ids, reason.trim());
+                                    };
+                                })();
+                            </script>
                         </t>
                     </t>
                 </div>

@@ -142,6 +142,7 @@
                                     <th>Leave Type</th>
                                     <th>Description</th>
                                     <th>Days</th>
+                                    <th>Attachment</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -171,6 +172,19 @@
                                                 </t>
                                             </td>
                                             <td>
+                                                <t t-set="leave_atts" t-value="leave.supported_attachment_ids or leave.attachment_ids or request.env['ir.attachment'].sudo().search([('res_model', '=', 'hr.leave'), ('res_id', '=', leave.id)])"/>
+                                                <t t-if="leave_atts">
+                                                    <t t-foreach="leave_atts" t-as="att">
+                                                        <a t-attf-href="/my/leaves/attachment/#{att.id}" class="btn btn-sm btn-outline-primary shadow-sm me-1 mb-1" style="border-radius: 6px; font-size: 0.78rem;" t-att-title="att.name" target="_blank">
+                                                            <i class="fa fa-paperclip me-1"/> <t t-esc="att.name[:14] + '...' if len(att.name) &gt; 16 else att.name"/>
+                                                        </a>
+                                                    </t>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted small">-</span>
+                                                </t>
+                                            </td>
+                                            <td>
                                                 <t t-if="leave.state == 'validate'">
                                                     <span class="badge bg-success text-white">Approved</span>
                                                 </t>
@@ -182,18 +196,33 @@
                                                 </t>
                                             </td>
                                             <td>
-                                                <t t-if="leave.state not in ['validate', 'refuse']">
-                                                    <a t-attf-href="/my/leaves/cancel/{{ leave.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to cancel this leave request?');">
-                                                        <i class="fa fa-times"/> Cancel
-                                                    </a>
-                                                </t>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <t t-if="leave.state in ['draft', 'confirm', 'validate1']">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary me-1" style="border-radius: 6px;"
+                                                                t-att-data-leave-id="leave.id"
+                                                                t-att-data-holiday-status-id="leave.holiday_status_id.id"
+                                                                t-att-data-date-from="leave.request_date_from.strftime('%Y-%m-%d') if leave.request_date_from else leave.date_from.strftime('%Y-%m-%d')"
+                                                                t-att-data-date-to="leave.request_date_to.strftime('%Y-%m-%d') if leave.request_date_to else leave.date_to.strftime('%Y-%m-%d')"
+                                                                t-att-data-reason="leave.name or ''"
+                                                                t-att-data-half-day="'true' if leave.request_unit_half else 'false'"
+                                                                t-att-data-period="leave.request_date_from_period or 'am'"
+                                                                onclick="triggerEditLeaveFromTable(this)">
+                                                            <i class="fa fa-pencil me-1"/> Edit
+                                                        </button>
+                                                    </t>
+                                                    <t t-if="leave.state not in ['refuse']">
+                                                        <a t-attf-href="/my/leaves/cancel/#{leave.id}" t-attf-class="btn btn-sm #{'btn-outline-danger' if leave.state != 'validate' else 'btn-outline-warning'}" style="border-radius: 6px;" t-attf-onclick="return confirm('#{'Are you sure you want to cancel this leave request?' if leave.state != 'validate' else 'Are you sure you want to request cancellation for this approved leave?'}');">
+                                                            <i class="fa fa-times me-1"/> <t t-esc="'Cancel' if leave.state != 'validate' else 'Request Cancellation'"/>
+                                                        </a>
+                                                    </t>
+                                                </div>
                                             </td>
                                         </tr>
                                     </t>
                                 </t>
                                 <t t-else="">
                                     <tr>
-                                        <td colspan="7" class="ess-empty-row">
+                                        <td colspan="8" class="ess-empty-row">
                                             <i class="fa fa-inbox fa-2x"/>
                                             <div>No leave requests found.</div>
                                         </td>
@@ -217,6 +246,7 @@
                                         <th>Leave Type</th>
                                         <th>Description</th>
                                         <th>Days</th>
+                                        <th>Attachment</th>
                                         <th>Status</th>
                                         <th class="text-center">Action</th>
                                     </tr>
@@ -227,7 +257,7 @@
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <img t-attf-src="/web/image/hr.employee/{{ tleave.employee_id.id }}/avatar_128" 
+                                                        <img t-attf-src="/web/image/hr.employee/#{tleave.employee_id.id}/avatar_128" 
                                                              style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
                                                         <span class="font-weight-bold text-dark"><t t-esc="tleave.employee_id.name"/></span>
                                                     </div>
@@ -253,6 +283,19 @@
                                                     </t>
                                                 </td>
                                                 <td>
+                                                    <t t-set="tleave_atts" t-value="tleave.supported_attachment_ids or tleave.attachment_ids or request.env['ir.attachment'].sudo().search([('res_model', '=', 'hr.leave'), ('res_id', '=', tleave.id)])"/>
+                                                    <t t-if="tleave_atts">
+                                                        <t t-foreach="tleave_atts" t-as="att">
+                                                            <a t-attf-href="/my/leaves/attachment/#{att.id}" class="btn btn-sm btn-outline-primary shadow-sm me-1 mb-1" style="border-radius: 6px; font-size: 0.78rem;" t-att-title="att.name" target="_blank">
+                                                                <i class="fa fa-paperclip me-1"/> <t t-esc="att.name[:14] + '...' if len(att.name) &gt; 16 else att.name"/>
+                                                            </a>
+                                                        </t>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="text-muted small">-</span>
+                                                    </t>
+                                                </td>
+                                                <td>
                                                     <t t-if="tleave.state == 'validate'">
                                                         <span class="badge bg-success text-white">Approved</span>
                                                     </t>
@@ -275,7 +318,7 @@
                                     </t>
                                     <t t-else="">
                                         <tr>
-                                            <td colspan="8" class="ess-empty-row">
+                                            <td colspan="9" class="ess-empty-row">
                                                 <i class="fa fa-users fa-2x"/>
                                                 <div>No employee leave records found.</div>
                                             </td>
@@ -328,7 +371,7 @@
             <div class="modal fade" id="newLeaveModal" tabindex="-1" role="dialog" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
-                        <form action="/my/leaves/create" method="post">
+                        <form action="/my/leaves/create" method="post" enctype="multipart/form-data">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                             
                             <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
@@ -394,9 +437,43 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="form-group mb-4">
+                                <div class="form-group mb-3">
                                     <label class="text-muted small font-weight-bold">Reason / Description</label>
-                                    <textarea class="form-control" name="name" rows="3" placeholder="Why are you requesting this leave?" style="border-radius: 6px;"></textarea>
+                                    <textarea class="form-control" name="name" rows="2" placeholder="Why are you requesting this leave?" style="border-radius: 6px;"></textarea>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-dark mb-2" style="font-size: 0.9rem;">
+                                        <i class="fa fa-paperclip me-1 text-primary"/> Supporting Documents / Attachments
+                                    </label>
+
+                                    <!-- Custom Modern Drag-and-Drop Zone -->
+                                    <div id="leave_dropzone" class="p-3 text-center rounded position-relative" 
+                                         style="border: 2px dashed #8b5cf6; background: #f8fafc; cursor: pointer; transition: all 0.2s ease-in-out;"
+                                         onclick="document.getElementById('leave_attachment').click();"
+                                         ondragover="event.preventDefault(); this.style.background='#f1f5f9'; this.style.borderColor='#6d28d9';"
+                                         ondragleave="this.style.background='#f8fafc'; this.style.borderColor='#8b5cf6';"
+                                         ondrop="event.preventDefault(); this.style.background='#f8fafc'; this.style.borderColor='#8b5cf6'; handleLeaveDrop(event);">
+                                        
+                                        <div id="dropzone_prompt">
+                                            <div class="mb-2">
+                                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 44px; height: 44px; background: rgba(139, 92, 246, 0.1); color: #6d28d9;">
+                                                    <i class="fa fa-cloud-upload fa-lg"/>
+                                                </span>
+                                            </div>
+                                            <div class="font-weight-bold text-dark mb-1" style="font-size: 0.9rem;">
+                                                Click to upload or drag &amp; drop files here
+                                            </div>
+                                            <div class="text-muted small">
+                                                Medical certificate, doctor's note, or proof (PDF, PNG, JPG, DOCX)
+                                            </div>
+                                        </div>
+
+                                        <!-- Dynamic Selected Files Container -->
+                                        <div id="leave_files_list" class="mt-2 text-start d-none"></div>
+
+                                        <!-- Hidden Native File Input -->
+                                        <input type="file" class="d-none" name="attachment" id="leave_attachment" multiple="1" onchange="handleLeaveFilesSelect(this)"/>
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer bg-white border-top-0 px-4 pb-4">
@@ -407,8 +484,250 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Edit Leave Modal -->
+            <div class="modal fade" id="editLeaveModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <form id="editLeaveForm" action="" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            
+                            <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                                <h5 class="modal-title font-weight-bold text-dark" id="editLeaveModalTitle"><i class="fa fa-pencil text-primary me-2"/> Edit Leave Request</h5>
+                                <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                    <span aria-hidden="true">&amp;times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body px-4 pt-3">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-dark small">Leave Type</label>
+                                    <select class="form-control" name="holiday_status_id" id="edit_holiday_status_id" required="1">
+                                        <option value="">-- Select Leave Type --</option>
+                                        <t t-foreach="leave_types" t-as="ltype">
+                                            <option t-att-value="ltype.id"><t t-esc="ltype.name"/></option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="form-group form-check mt-2 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="edit_is_half_day" name="request_unit_half" value="True"/>
+                                    <label class="form-check-label font-weight-bold" for="edit_is_half_day">Request Half Day</label>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="font-weight-bold text-dark small">Start Date</label>
+                                            <input type="date" class="form-control" name="date_from" id="edit_leave_date_from" required="1"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6" id="edit_leave_date_to_container">
+                                        <div class="form-group mb-3">
+                                            <label class="font-weight-bold text-dark small">End Date</label>
+                                            <input type="date" class="form-control" name="date_to" id="edit_leave_date_to" required="1"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6" id="edit_half_day_period_container" style="display: none;">
+                                        <div class="form-group mb-3">
+                                            <label class="font-weight-bold text-dark small">Period</label>
+                                            <select class="form-control" name="request_date_from_period" id="edit_request_date_from_period">
+                                                <option value="am">Morning</option>
+                                                <option value="pm">Afternoon</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="text-muted small font-weight-bold">Reason / Description</label>
+                                    <textarea class="form-control" name="name" id="edit_leave_name" rows="2" placeholder="Why are you requesting this leave?" style="border-radius: 6px;"></textarea>
+                                </div>
+
+                                <!-- Existing Attachments Display -->
+                                <div id="edit_existing_attachments_wrapper" class="mb-3 d-none">
+                                    <label class="font-weight-bold text-dark small me-2"><i class="fa fa-paperclip text-primary me-1"/> Existing Attachments:</label>
+                                    <div id="edit_existing_attachments_list" class="d-flex flex-wrap gap-2 mt-1"></div>
+                                </div>
+
+                                <!-- Upload New Supporting Document Dropzone -->
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-dark mb-2 small"><i class="fa fa-cloud-upload me-1 text-primary"/> Add New Supporting Document</label>
+                                    <div id="edit_leave_dropzone" class="p-3 text-center rounded position-relative" 
+                                         style="border: 2px dashed #8b5cf6; background: #f8fafc; cursor: pointer;"
+                                         onclick="document.getElementById('edit_leave_attachment').click();">
+                                        <div id="edit_dropzone_prompt">
+                                            <div class="font-weight-bold text-dark small">Click to upload or drag &amp; drop files here</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">(Medical certificate, proof, PDF, PNG, JPG)</div>
+                                        </div>
+                                        <div id="edit_leave_files_list" class="mt-2 text-start d-none"></div>
+                                        <input type="file" class="d-none" name="attachment" id="edit_leave_attachment" multiple="1" onchange="handleEditLeaveFilesSelect(this)"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-white border-top-0 px-4 pb-4 d-flex justify-content-between">
+                                <div>
+                                    <a id="edit_cancel_leave_btn" href="#" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to cancel this leave request?');" style="border-radius: 6px; font-weight: 500; padding: 8px 16px;">
+                                        <i class="fa fa-trash me-1"/> Cancel Leave
+                                    </a>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn me-2" data-bs-dismiss="modal" style="background: #fadcb5; color: #333; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Close</button>
+                                    <button type="submit" class="btn" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Update Request</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View Leave Details Modal -->
+            <div class="modal fade" id="viewLeaveModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content border-0 shadow" style="border-radius: 12px; overflow: hidden;">
+                        <div class="modal-header bg-white border-bottom-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                            <h5 class="modal-title font-weight-bold text-dark"><i class="fa fa-info-circle text-primary me-2"/> Leave Request Details</h5>
+                            <button type="button" class="close text-dark" data-bs-dismiss="modal" aria-label="Close" style="border: 2px solid #333; border-radius: 4px; opacity: 1; padding: 2px 8px; font-size: 1.2rem; background: transparent;">
+                                <span aria-hidden="true">&amp;times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body px-4 pt-3">
+                            <div class="p-3 mb-3 bg-light rounded border">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <h6 class="font-weight-bold text-dark mb-0" id="view_leave_type_name">-</h6>
+                                    <span id="view_leave_status_badge" class="badge bg-primary text-white">-</span>
+                                </div>
+                                <div class="small text-muted">
+                                    <i class="fa fa-calendar me-1 text-primary"/> <span id="view_leave_dates">-</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small font-weight-bold">Reason / Description</label>
+                                <div class="p-2 bg-white rounded border text-dark font-weight-bold small" id="view_leave_reason" style="min-height: 48px;">-</div>
+                            </div>
+                            <div id="view_existing_attachments_wrapper" class="mb-3 d-none">
+                                <label class="font-weight-bold text-dark small mb-1"><i class="fa fa-paperclip text-primary me-1"/> Attachments:</label>
+                                <div id="view_existing_attachments_list" class="d-flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-white border-top-0 px-4 pb-4">
+                            <button type="button" class="btn" data-bs-dismiss="modal" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <script type="text/javascript">
+                function triggerEditLeaveFromTable(btn) {
+                    var leaveId = btn.getAttribute('data-leave-id');
+                    var holidayStatusId = btn.getAttribute('data-holiday-status-id');
+                    var dateFrom = btn.getAttribute('data-date-from');
+                    var dateTo = btn.getAttribute('data-date-to');
+                    var reason = btn.getAttribute('data-reason');
+                    var isHalf = btn.getAttribute('data-half-day') === 'true';
+                    var period = btn.getAttribute('data-period');
+
+                    var form = document.getElementById('editLeaveForm');
+                    if (form) {
+                        form.action = '/my/leaves/update/' + leaveId;
+                        var typeSelect = document.getElementById('edit_holiday_status_id');
+                        if (typeSelect) typeSelect.value = holidayStatusId;
+                        var dtFrom = document.getElementById('edit_leave_date_from');
+                        if (dtFrom) dtFrom.value = dateFrom;
+                        var dtTo = document.getElementById('edit_leave_date_to');
+                        if (dtTo) dtTo.value = dateTo;
+                        var reasonInput = document.getElementById('edit_leave_name');
+                        if (reasonInput) reasonInput.value = reason || '';
+
+                        var halfCheck = document.getElementById('edit_is_half_day');
+                        var periodWrap = document.getElementById('edit_half_day_period_container');
+                        var dateToWrap = document.getElementById('edit_leave_date_to_container');
+                        if (halfCheck) {
+                            halfCheck.checked = isHalf;
+                            if (isHalf) {
+                                if (periodWrap) periodWrap.style.display = 'block';
+                                if (dateToWrap) dateToWrap.style.display = 'none';
+                                var periodSel = document.getElementById('edit_request_date_from_period');
+                                if (periodSel) periodSel.value = period || 'am';
+                            } else {
+                                if (periodWrap) periodWrap.style.display = 'none';
+                                if (dateToWrap) dateToWrap.style.display = 'block';
+                            }
+                        }
+
+                        var cancelBtn = document.getElementById('edit_cancel_leave_btn');
+                        if (cancelBtn) {
+                            cancelBtn.href = '/my/leaves/cancel/' + leaveId;
+                        }
+
+                        $('#editLeaveModal').modal('show');
+                    }
+                }
+
+                function handleEditLeaveFilesSelect(input) {
+                    var filesList = document.getElementById('edit_leave_files_list');
+                    var prompt = document.getElementById('edit_dropzone_prompt');
+                    if (!input.files || input.files.length === 0) {
+                        if (filesList) { filesList.classList.add('d-none'); filesList.innerHTML = ''; }
+                        if (prompt) prompt.style.display = 'block';
+                        return;
+                    }
+                    if (prompt) prompt.style.display = 'none';
+                    if (filesList) {
+                        filesList.classList.remove('d-none');
+                        filesList.innerHTML = '';
+                        for (var i = 0; i &lt; input.files.length; i++) {
+                            var file = input.files[i];
+                            var sizeKb = (file.size / 1024).toFixed(1);
+                            var sizeStr = sizeKb &gt; 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB';
+                            var fileCard = document.createElement('div');
+                            fileCard.className = 'd-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded shadow-sm border';
+                            fileCard.innerHTML = '&lt;div class="d-flex align-items-center"&gt;&lt;span class="me-2 text-primary" style="font-size: 1.2rem;"&gt;&lt;i class="fa fa-file-text-o"/&gt;&lt;/span&gt;&lt;div&gt;&lt;div class="font-weight-bold text-dark small" style="word-break: break-all;"&gt;' + file.name + '&lt;/div&gt;&lt;div class="text-muted" style="font-size: 0.75rem;"&gt;' + sizeStr + '&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;span class="badge bg-success text-white rounded-circle p-1" style="font-size: 0.75rem;"&gt;&lt;i class="fa fa-check"/&gt;&lt;/span&gt;';
+                            filesList.appendChild(fileCard);
+                        }
+                    }
+                }
+                function handleLeaveFilesSelect(input) {
+                    var filesList = document.getElementById('leave_files_list');
+                    var prompt = document.getElementById('dropzone_prompt');
+                    if (!input.files || input.files.length === 0) {
+                        if (filesList) { filesList.classList.add('d-none'); filesList.innerHTML = ''; }
+                        if (prompt) prompt.style.display = 'block';
+                        return;
+                    }
+
+                    if (prompt) prompt.style.display = 'none';
+                    if (filesList) {
+                        filesList.classList.remove('d-none');
+                        filesList.innerHTML = '';
+
+                        for (var i = 0; i &lt; input.files.length; i++) {
+                            var file = input.files[i];
+                            var sizeKb = (file.size / 1024).toFixed(1);
+                            var sizeStr = sizeKb &gt; 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB';
+                            
+                            var fileCard = document.createElement('div');
+                            fileCard.className = 'd-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded shadow-sm border';
+                            fileCard.innerHTML = '&lt;div class="d-flex align-items-center"&gt;' +
+                                '&lt;span class="me-2 text-primary" style="font-size: 1.2rem;"&gt;&lt;i class="fa fa-file-text-o"/&gt;&lt;/span&gt;' +
+                                '&lt;div&gt;' +
+                                    '&lt;div class="font-weight-bold text-dark small" style="word-break: break-all;"&gt;' + file.name + '&lt;/div&gt;' +
+                                    '&lt;div class="text-muted" style="font-size: 0.75rem;"&gt;' + sizeStr + '&lt;/div&gt;' +
+                                '&lt;/div&gt;' +
+                            '&lt;/div&gt;' +
+                            '&lt;span class="badge bg-success text-white rounded-circle p-1" style="font-size: 0.75rem;"&gt;&lt;i class="fa fa-check"/&gt;&lt;/span&gt;';
+                            
+                            filesList.appendChild(fileCard);
+                        }
+                    }
+                }
+
+                function handleLeaveDrop(e) {
+                    var dt = e.dataTransfer;
+                    var files = dt.files;
+                    var fileInput = document.getElementById('leave_attachment');
+                    if (files &amp;&amp; files.length &gt; 0 &amp;&amp; fileInput) {
+                        fileInput.files = files;
+                        handleLeaveFilesSelect(fileInput);
+                    }
+                }
+
                 document.addEventListener('DOMContentLoaded', function() {
                     const form = document.querySelector('#newLeaveModal form');
                     if(form) {
@@ -522,38 +841,102 @@
                                 $('#newLeaveModal').modal('show');
                             },
                             eventClick: function(info) {
-                                if (info.event.extendedProps.description) {
-                                    // Create a toast dynamically
-                                    var toastContainer = document.getElementById('dynamic-toast-container');
-                                    if (!toastContainer) {
-                                        toastContainer = document.createElement('div');
-                                        toastContainer.id = 'dynamic-toast-container';
-                                        toastContainer.className = 'position-fixed';
-                                        toastContainer.style.zIndex = '1055';
-                                        toastContainer.style.right = '20px';
-                                        toastContainer.style.top = '80px'; // Below potential error toast
-                                        document.body.appendChild(toastContainer);
+                                var props = info.event.extendedProps;
+                                if (props &amp;&amp; props.leave_id) {
+                                    if (props.is_owner &amp;&amp; (props.state === 'draft' || props.state === 'confirm' || props.state === 'validate1')) {
+                                        var form = document.getElementById('editLeaveForm');
+                                        if (form) {
+                                            form.action = '/my/leaves/update/' + props.leave_id;
+                                            var typeSelect = document.getElementById('edit_holiday_status_id');
+                                            if (typeSelect) typeSelect.value = props.holiday_status_id;
+                                            var dtFrom = document.getElementById('edit_leave_date_from');
+                                            if (dtFrom) dtFrom.value = props.date_from_val;
+                                            var dtTo = document.getElementById('edit_leave_date_to');
+                                            if (dtTo) dtTo.value = props.date_to_val;
+                                            var reasonInput = document.getElementById('edit_leave_name');
+                                            if (reasonInput) reasonInput.value = props.reason || '';
+
+                                            var halfCheck = document.getElementById('edit_is_half_day');
+                                            var periodWrap = document.getElementById('edit_half_day_period_container');
+                                            var dateToWrap = document.getElementById('edit_leave_date_to_container');
+                                            if (halfCheck) {
+                                                halfCheck.checked = props.request_unit_half;
+                                                if (props.request_unit_half) {
+                                                    if (periodWrap) periodWrap.style.display = 'block';
+                                                    if (dateToWrap) dateToWrap.style.display = 'none';
+                                                    var periodSel = document.getElementById('edit_request_date_from_period');
+                                                    if (periodSel) periodSel.value = props.request_date_from_period || 'am';
+                                                } else {
+                                                    if (periodWrap) periodWrap.style.display = 'none';
+                                                    if (dateToWrap) dateToWrap.style.display = 'block';
+                                                }
+                                            }
+
+                                            var attsWrap = document.getElementById('edit_existing_attachments_wrapper');
+                                            var attsList = document.getElementById('edit_existing_attachments_list');
+                                            if (attsWrap &amp;&amp; attsList) {
+                                                if (props.attachments &amp;&amp; props.attachments.length &gt; 0) {
+                                                    attsWrap.classList.remove('d-none');
+                                                    attsList.innerHTML = '';
+                                                    props.attachments.forEach(function(att) {
+                                                        var a = document.createElement('a');
+                                                        a.href = '/my/leaves/attachment/' + att.id;
+                                                        a.target = '_blank';
+                                                        a.className = 'btn btn-sm btn-outline-primary me-1 mb-1';
+                                                        a.style.borderRadius = '6px';
+                                                        a.innerHTML = '<i class="fa fa-paperclip me-1"></i> ' + att.name;
+                                                        attsList.appendChild(a);
+                                                    });
+                                                } else {
+                                                    attsWrap.classList.add('d-none');
+                                                    attsList.innerHTML = '';
+                                                }
+                                            }
+
+                                            var cancelBtn = document.getElementById('edit_cancel_leave_btn');
+                                            if (cancelBtn) {
+                                                cancelBtn.href = '/my/leaves/cancel/' + props.leave_id;
+                                            }
+
+                                            $('#editLeaveModal').modal('show');
+                                        }
+                                    } else {
+                                        var typeTitle = document.getElementById('view_leave_type_name');
+                                        if (typeTitle) typeTitle.innerText = props.holiday_status_name || info.event.title;
+                                        var badge = document.getElementById('view_leave_status_badge');
+                                        if (badge) {
+                                            var st = props.state ? props.state.toUpperCase() : 'APPROVED';
+                                            badge.innerText = st;
+                                            badge.className = (props.state === 'validate') ? 'badge bg-success text-white' : (props.state === 'refuse' ? 'badge bg-danger text-white' : 'badge bg-warning text-white');
+                                        }
+                                        var dtLabel = document.getElementById('view_leave_dates');
+                                        if (dtLabel) dtLabel.innerText = (props.date_from_val || '') + ' to ' + (props.date_to_val || '');
+                                        var reasonDiv = document.getElementById('view_leave_reason');
+                                        if (reasonDiv) reasonDiv.innerText = props.reason || 'No description provided.';
+
+                                        var attsWrap = document.getElementById('view_existing_attachments_wrapper');
+                                        var attsList = document.getElementById('view_existing_attachments_list');
+                                        if (attsWrap &amp;&amp; attsList) {
+                                            if (props.attachments &amp;&amp; props.attachments.length &gt; 0) {
+                                                attsWrap.classList.remove('d-none');
+                                                attsList.innerHTML = '';
+                                                props.attachments.forEach(function(att) {
+                                                    var a = document.createElement('a');
+                                                    a.href = '/my/leaves/attachment/' + att.id;
+                                                    a.target = '_blank';
+                                                    a.className = 'btn btn-sm btn-outline-primary me-1 mb-1';
+                                                    a.style.borderRadius = '6px';
+                                                    a.innerHTML = '<i class="fa fa-paperclip me-1"></i> ' + att.name;
+                                                    attsList.appendChild(a);
+                                                });
+                                            } else {
+                                                attsWrap.classList.add('d-none');
+                                                attsList.innerHTML = '';
+                                            }
+                                        }
+
+                                        $('#viewLeaveModal').modal('show');
                                     }
-                                    
-                                    var toastHTML = `
-                                        <div class="toast align-items-center text-white border-0 show shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true" style="border-radius: 8px; background-color: var(--ess-primary);">
-                                            <div class="d-flex justify-content-between">
-                                                <div class="toast-body font-weight-bold px-4 py-3" style="font-size: 1rem;">
-                                                    <i class="fa fa-info-circle mr-2"></i> ${info.event.extendedProps.description}
-                                                </div>
-                                                <button type="button" class="close text-white mt-2 mr-2" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').remove();" style="background: transparent; border: none; opacity: 1; font-size: 1.5rem;">
-                                                    <span aria-hidden="true">&amp;times;</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    `;
-                                    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
-                                    
-                                    // Auto hide after 5 seconds
-                                    var newToast = toastContainer.lastElementChild;
-                                    setTimeout(function() {
-                                        if (newToast) newToast.remove();
-                                    }, 5000);
                                 }
                             }
                         });

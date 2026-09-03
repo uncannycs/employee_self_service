@@ -2,8 +2,9 @@
 from odoo import http, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
+import base64
 
 def _get_employee(user):
     employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
@@ -160,16 +161,54 @@ class PortalCustomLeaves(CustomerPortal):
             if leave.state in ['draft', 'confirm', 'validate1']:
                 color = '#f39c12' # orange for pending
                 
-            title = f"{leave.employee_id.name} - {leave.holiday_status_id.name}" if (is_manager and leave.employee_id != employee) else f"{leave.holiday_status_id.name} ({leave.state})"
+            state_label_map = {
+                'draft': 'Pending',
+                'confirm': 'Pending',
+                'validate1': 'Pending',
+                'validate': 'Approved',
+                'refuse': 'Refused'
+            }
+            st_label = state_label_map.get(leave.state, leave.state.title())
+            title = f"{leave.employee_id.name} - {leave.holiday_status_id.name} ({st_label})" if (is_manager and leave.employee_id != employee) else f"{leave.holiday_status_id.name} ({st_label})"
             
+            atts = leave.supported_attachment_ids or leave.attachment_ids or request.env['ir.attachment'].sudo().search([('res_model', '=', 'hr.leave'), ('res_id', '=', leave.id)])
+            att_list = [{'id': att.id, 'name': att.name} for att in atts]
+
+            dt_from = leave.request_date_from or (leave.date_from.date() if leave.date_from else False)
+            dt_to = leave.request_date_to or (leave.date_to.date() if leave.date_to else False)
+            
+            if dt_from and dt_to:
+                start_str = dt_from.strftime('%Y-%m-%d')
+                # FullCalendar allDay end is EXCLUSIVE, so add 1 day to include the final date
+                end_str = (dt_to + timedelta(days=1)).strftime('%Y-%m-%d')
+            else:
+                start_str = leave.date_from.strftime('%Y-%m-%d') if leave.date_from else ''
+                end_str = (leave.date_to + timedelta(days=1)).strftime('%Y-%m-%d') if leave.date_to else ''
+
             events.append({
                 'id': leave.id,
                 'title': title,
-                'start': leave.date_from.isoformat() + 'Z',
-                'end': leave.date_to.isoformat() + 'Z',
+                'start': start_str,
+                'end': end_str,
                 'color': color,
                 'allDay': True,
                 'description': leave.name or '',
+                'leave_id': leave.id,
+                'employee_id': leave.employee_id.id,
+                'employee_name': leave.employee_id.name,
+                'is_owner': bool(employee and leave.employee_id.id == employee.id),
+                'holiday_status_id': leave.holiday_status_id.id,
+                'holiday_status_name': leave.holiday_status_id.name,
+                'state': leave.state,
+                'date_from_val': dt_from.strftime('%Y-%m-%d') if dt_from else '',
+                'date_to_val': dt_to.strftime('%Y-%m-%d') if dt_to else '',
+                'request_unit_half': bool(leave.request_unit_half),
+                'request_date_from_period': leave.request_date_from_period or 'am',
+                'request_unit_hours': bool(leave.request_unit_hours),
+                'number_of_days': leave.number_of_days,
+                'number_of_hours': leave.number_of_hours,
+                'reason': leave.name or '',
+                'attachments': att_list,
             })
             
         # Public holidays
@@ -179,11 +218,13 @@ class PortalCustomLeaves(CustomerPortal):
             ('resource_id', '=', False)
         ])
         for holiday in holidays:
+            h_from = holiday.date_from.date()
+            h_to = holiday.date_to.date() + timedelta(days=1)
             events.append({
                 'id': f'holiday_{holiday.id}',
                 'title': holiday.name,
-                'start': holiday.date_from.isoformat() + 'Z',
-                'end': holiday.date_to.isoformat() + 'Z',
+                'start': h_from.strftime('%Y-%m-%d'),
+                'end': h_to.strftime('%Y-%m-%d'),
                 'color': '#28a745',
                 'allDay': True,
             })
@@ -312,7 +353,37 @@ class PortalCustomLeaves(CustomerPortal):
                     create_vals['date_from'] = start_dt
                     create_vals['date_to'] = end_dt
                     
-                request.env['hr.leave'].sudo().create(create_vals)
+                leave_record = request.env['hr.leave'].sudo().create(create_vals)
+                if leave_record.state == 'validate':
+                    leave_record.sudo().write({'state': 'confirm'})
+
+                # Save Uploaded Attachments & Link to hr.leave for backend & portal visibility
+                files = request.httprequest.files.getlist('attachment')
+                if not files:
+                    file_single = request.httprequest.files.get('attachment')
+                    if file_single:
+                        files = [file_single]
+
+                attachment_ids = []
+                for file in files:
+                    if file and getattr(file, 'filename', False):
+                        file_data = file.read()
+                        if file_data:
+                            base64_data = base64.b64encode(file_data).decode('utf-8')
+                            attachment = request.env['ir.attachment'].sudo().create({
+                                'name': file.filename,
+                                'datas': base64_data,
+                                'res_model': 'hr.leave',
+                                'res_id': leave_record.id,
+                            })
+                            attachment_ids.append(attachment.id)
+
+                if attachment_ids:
+                    if hasattr(leave_record, 'supported_attachment_ids'):
+                        leave_record.sudo().write({'supported_attachment_ids': [(6, 0, attachment_ids)]})
+                    if hasattr(leave_record, 'attachment_ids'):
+                        leave_record.sudo().write({'attachment_ids': [(6, 0, attachment_ids)]})
+
                 # Flush the environment to trigger any @api.constrains (like overlap checks)
                 # so that the exception is caught here instead of at the end of the request.
                 request.env.flush_all()
@@ -336,24 +407,150 @@ class PortalCustomLeaves(CustomerPortal):
             
         return request.redirect('/my/leaves')
 
+    @http.route('/my/leaves/attachment/<int:attachment_id>', type='http', auth="user", website=True)
+    def download_leave_attachment(self, attachment_id, **kw):
+        attachment = request.env['ir.attachment'].sudo().browse(attachment_id)
+        if not attachment.exists():
+            return request.not_found()
+
+        user = request.env.user
+        employee = _get_employee(user)
+
+        leave = False
+        if attachment.res_model == 'hr.leave' and attachment.res_id:
+            leave = request.env['hr.leave'].sudo().browse(attachment.res_id)
+        else:
+            leave = request.env['hr.leave'].sudo().search([
+                '|', ('supported_attachment_ids', 'in', attachment.id),
+                     ('attachment_ids', 'in', attachment.id)
+            ], limit=1)
+
+        is_owner = (leave and employee and leave.employee_id.id == employee.id)
+        is_manager = (leave and employee and leave.employee_id.parent_id.id == employee.id)
+        is_admin = user.has_group('base.group_erp_manager') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or user.has_group('hr_holidays.group_hr_holidays_user')
+
+        if not (is_owner or is_manager or is_admin):
+            return request.redirect('/my/leaves?error=Unauthorized%20attachment%20access.')
+
+        return request.redirect('/web/content/%s?download=true' % attachment.id)
+
+    @http.route('/my/leaves/update/<int:leave_id>', type='http', auth="user", methods=['POST'], website=True)
+    def update_leave(self, leave_id, **kw):
+        user = request.env.user
+        employee = _get_employee(user)
+        if not employee:
+            return request.redirect('/my/leaves?error=Employee%20record%20not%20found.')
+
+        leave = request.env['hr.leave'].sudo().search([
+            ('id', '=', leave_id),
+            ('employee_id', '=', employee.id),
+            ('state', 'in', ['draft', 'confirm', 'validate1'])
+        ], limit=1)
+
+        if not leave:
+            return request.redirect('/my/leaves?error=Leave%20cannot%20be%20edited%20or%20is%20already%20processed.')
+
+        post = request.httprequest.form
+        try:
+            leave_type_id = int(post.get('holiday_status_id') or 0)
+            date_from = post.get('date_from')
+            date_to = post.get('date_to')
+            name = post.get('name', '')
+            is_half_day = post.get('request_unit_half') == 'True'
+            half_day_period = post.get('request_date_from_period')
+
+            if leave_type_id and date_from:
+                df = datetime.strptime(date_from, '%Y-%m-%d')
+                dt = df if is_half_day else datetime.strptime(date_to or date_from, '%Y-%m-%d')
+
+                update_vals = {
+                    'holiday_status_id': leave_type_id,
+                    'request_date_from': df.date(),
+                    'request_date_to': dt.date(),
+                    'date_from': df.replace(hour=0, minute=0, second=0),
+                    'date_to': dt.replace(hour=23, minute=59, second=59),
+                    'name': name,
+                }
+
+                if is_half_day:
+                    update_vals['request_unit_half'] = True
+                    update_vals['request_date_from_period'] = half_day_period
+                    update_vals['request_date_to_period'] = half_day_period
+                else:
+                    update_vals['request_unit_half'] = False
+
+                leave.sudo().write(update_vals)
+
+                # Save new attachments if uploaded
+                files = request.httprequest.files.getlist('attachment')
+                if not files:
+                    file_single = request.httprequest.files.get('attachment')
+                    if file_single:
+                        files = [file_single]
+
+                attachment_ids = []
+                for file in files:
+                    if file and getattr(file, 'filename', False):
+                        file_data = file.read()
+                        if file_data:
+                            base64_data = base64.b64encode(file_data).decode('utf-8')
+                            attachment = request.env['ir.attachment'].sudo().create({
+                                'name': file.filename,
+                                'datas': base64_data,
+                                'res_model': 'hr.leave',
+                                'res_id': leave.id,
+                            })
+                            attachment_ids.append(attachment.id)
+
+                if attachment_ids:
+                    existing_atts = leave.supported_attachment_ids.ids if hasattr(leave, 'supported_attachment_ids') else []
+                    all_atts = list(set(existing_atts + attachment_ids))
+                    if hasattr(leave, 'supported_attachment_ids'):
+                        leave.sudo().write({'supported_attachment_ids': [(6, 0, all_atts)]})
+                    if hasattr(leave, 'attachment_ids'):
+                        leave.sudo().write({'attachment_ids': [(6, 0, all_atts)]})
+
+                request.env.flush_all()
+        except Exception as e:
+            request.env.cr.rollback()
+            import logging
+            logging.getLogger(__name__).error("Leave Update Error: %s", str(e))
+            import urllib.parse
+            error_msg = str(e)
+            if hasattr(e, 'args') and len(e.args) > 0:
+                error_msg = str(e.args[0])
+            return request.redirect('/my/leaves?error=' + urllib.parse.quote(error_msg.replace('\n', ' ')))
+
+        return request.redirect('/my/leaves')
+
     @http.route('/my/leaves/cancel/<int:leave_id>', type='http', auth="user", website=True)
     def cancel_leave(self, leave_id, **kw):
         user = request.env.user
         employee = _get_employee(user)
-        if not employee:
-            return request.redirect('/my')
-
-        leave = request.env['hr.leave'].sudo().search([
-            ('id', '=', leave_id),
-            ('employee_id', '=', employee.id)
-        ])
         
-        if leave and leave.state in ['draft', 'confirm', 'validate1']:
+        domain = [('id', '=', leave_id)]
+        is_admin = user.has_group('base.group_erp_manager') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin')
+        is_mgr = user.has_group('ucs_employee_leave_management.group_portal_leave_approval_manager')
+        if not (is_admin or is_mgr) and employee:
+            domain.append(('employee_id', '=', employee.id))
+
+        leave = request.env['hr.leave'].sudo().search(domain, limit=1)
+        
+        if leave:
             try:
-                leave.unlink()
+                # In Odoo, refusing/cancelling a leave releases the allocated balance properly
+                if hasattr(leave, 'action_refuse'):
+                    leave.sudo().action_refuse()
+                elif hasattr(leave, 'action_cancel'):
+                    leave.sudo().action_cancel()
+                else:
+                    leave.sudo().write({'state': 'refuse'})
             except Exception as e:
-                import urllib.parse
-                error_msg = str(e).replace('\n', ' ')
-                return request.redirect('/my/leaves?error=' + urllib.parse.quote(error_msg))
+                try:
+                    leave.sudo().write({'state': 'refuse'})
+                except Exception as ex:
+                    import urllib.parse
+                    error_msg = str(ex).replace('\n', ' ')
+                    return request.redirect('/my/leaves?error=' + urllib.parse.quote(error_msg))
             
         return request.redirect('/my/leaves')

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit Portal Timesheets View to Inject Checkbox Selection & Export Excel Button -->
+    <template id="portal_my_timesheets_export_button" inherit_id="ucs_portal_self_service.portal_my_timesheets_override" name="Timesheets Export Button and Selection">
+        
+        <!-- Inject Export Excel Button next to View Switcher -->
+        <xpath expr="//div[hasclass('ms-auto')]" position="inside">
+            <button type="button" id="btn_export_timesheets_excel"
+                    class="btn btn-sm shadow-sm text-white me-2" 
+                    style="background: #16a34a; border-radius: 6px; font-weight: 600; font-size: 0.8rem; padding: 6px 14px;"
+                    title="Export Selected or Filtered Timesheets to Excel"
+                    onclick="handleTimesheetExcelExport();">
+                <i class="fa fa-file-excel-o me-1"/> Export Excel
+                <span id="ts_selected_badge" class="badge bg-white text-success ms-1 d-none" style="font-size: 0.75rem; vertical-align: middle;">0 selected</span>
+            </button>
+        </xpath>
+
+        <!-- Prepend Select All Checkbox Column into Table Header -->
+        <xpath expr="//table[hasclass('ess-hist-table')]/thead/tr/th[1]" position="before">
+            <th style="width: 38px; text-align: center; vertical-align: middle;">
+                <input type="checkbox" id="ts_select_all_cb" style="cursor: pointer; transform: scale(1.15);" title="Select / Deselect All"/>
+            </th>
+        </xpath>
+
+        <!-- Inject Checkbox Column into Timesheet Item Rows -->
+        <xpath expr="//tr[hasclass('ts-item-row')]/td[1]" position="before">
+            <td style="text-align: center; vertical-align: middle; width: 38px;">
+                <input type="checkbox" class="ts-row-cb" t-att-value="ts.id" onchange="updateTsExportSelectionCount();" style="cursor: pointer; transform: scale(1.15);"/>
+            </td>
+        </xpath>
+
+        <!-- Inject Group Checkbox into Group Header Rows -->
+        <xpath expr="//i[hasclass('ts-group-icon')]" position="after">
+            <input type="checkbox" class="ts-group-cb me-2" t-attf-data-group-target="{{ row['my_class'] }}" onclick="event.stopPropagation(); toggleTsGroupSelection(this);" style="cursor: pointer; transform: scale(1.15);" title="Select All in Group"/>
+        </xpath>
+        <xpath expr="//i[hasclass('ts-group-icon')]/parent::td" position="attributes">
+            <attribute name="colspan">8</attribute>
+        </xpath>
+
+        <!-- Adjust Empty Table Row Colspan -->
+        <xpath expr="//td[hasclass('ess-empty-row')]" position="attributes">
+            <attribute name="colspan">9</attribute>
+        </xpath>
+
+        <!-- Inline JS & Style Injection for Checkbox & GroupBy Selection -->
+        <xpath expr="//div[hasclass('ess-hist-body')]" position="inside">
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    initTimesheetCheckboxListeners();
+                });
+
+                function initTimesheetCheckboxListeners() {
+                    var selectAllCb = document.getElementById('ts_select_all_cb');
+                    if (selectAllCb) {
+                        selectAllCb.addEventListener('change', function() {
+                            var rowCbs = document.querySelectorAll('.ts-row-cb');
+                            var groupCbs = document.querySelectorAll('.ts-group-cb');
+                            for (var i = 0; i &lt; rowCbs.length; i++) {
+                                rowCbs[i].checked = this.checked;
+                            }
+                            for (var j = 0; j &lt; groupCbs.length; j++) {
+                                groupCbs[j].checked = this.checked;
+                            }
+                            updateTsExportSelectionCount();
+                        });
+                    }
+                }
+
+                function toggleTsGroupSelection(groupCb) {
+                    var groupTarget = groupCb.getAttribute('data-group-target');
+                    if (groupTarget) {
+                        // Find all child rows matching group target class
+                        var childRows = document.querySelectorAll('.' + groupTarget);
+                        for (var i = 0; i &lt; childRows.length; i++) {
+                            var row = childRows[i];
+                            var cb = row.querySelector('.ts-row-cb');
+                            if (cb) {
+                                cb.checked = groupCb.checked;
+                            }
+                            var nestedGrpCb = row.querySelector('.ts-group-cb');
+                            if (nestedGrpCb) {
+                                nestedGrpCb.checked = groupCb.checked;
+                            }
+                        }
+                    }
+                    updateTsExportSelectionCount();
+                }
+
+                function updateTsExportSelectionCount() {
+                    var checkedCbs = document.querySelectorAll('.ts-row-cb:checked');
+                    var badge = document.getElementById('ts_selected_badge');
+                    if (badge) {
+                        if (checkedCbs.length &gt; 0) {
+                            badge.textContent = checkedCbs.length + ' selected';
+                            badge.classList.remove('d-none');
+                        } else {
+                            badge.classList.add('d-none');
+                        }
+                    }
+                }
+
+                function handleTimesheetExcelExport() {
+                    var checkedCbs = document.querySelectorAll('.ts-row-cb:checked');
+                    var selectedIds = [];
+                    for (var i = 0; i &lt; checkedCbs.length; i++) {
+                        selectedIds.push(checkedCbs[i].value);
+                    }
+
+                    var currentUrl = new URL(window.location.href);
+                    var exportUrl = new URL('/my/timesheets/export', window.location.origin);
+
+                    // Preserve current active filters
+                    if (currentUrl.searchParams.has('scope')) exportUrl.searchParams.set('scope', currentUrl.searchParams.get('scope'));
+                    if (currentUrl.searchParams.has('groupby')) exportUrl.searchParams.set('groupby', currentUrl.searchParams.get('groupby'));
+                    if (currentUrl.searchParams.has('filterby')) exportUrl.searchParams.set('filterby', currentUrl.searchParams.get('filterby'));
+                    if (currentUrl.searchParams.has('search')) exportUrl.searchParams.set('search', currentUrl.searchParams.get('search'));
+
+                    // Append selected IDs if any checkboxes are checked
+                    if (selectedIds.length &gt; 0) {
+                        exportUrl.searchParams.set('timesheet_ids', selectedIds.join(','));
+                    }
+
+                    window.location.href = exportUrl.href;
+                }
+            </script>
+        </xpath>
+
+    </template>
+</odoo>

@@ -618,6 +618,16 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
         name = post.get('name', '').strip()
         if project_id and task_id and name and date and unit_amount > 0:
             user = request.env.user
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            redirect_to = post.get('redirect_to', '/my/timesheets')
+            sep = '&' if '?' in redirect_to else '?'
+
+            # Guardrail 1: Block future date logging
+            if str(date) > today_str:
+                import urllib.parse
+                error_msg = "Logging timesheets for future dates is not allowed."
+                return request.redirect(f"{redirect_to}{sep}error={urllib.parse.quote(error_msg)}")
+
             employee = request.env['hr.employee'].sudo().search([('user_id', '=', user.id)], limit=1)
             
             vals = {
@@ -637,8 +647,6 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
                 request.env.cr.rollback()
                 import urllib.parse
                 error_msg = str(e).replace('\n', ' ')
-                redirect_to = post.get('redirect_to', '/my/timesheets')
-                sep = '&' if '?' in redirect_to else '?'
                 return request.redirect(f"{redirect_to}{sep}error={urllib.parse.quote(error_msg)}")
             
         redirect_to = post.get('redirect_to', '/my/timesheets')

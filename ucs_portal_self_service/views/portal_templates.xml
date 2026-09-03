@@ -11,25 +11,32 @@
                 <div class="ess-sidebar">
                     <t t-if="is_employee">
                         <div class="ess-profile-card">
-                            <div class="ess-profile-avatar-wrap">
-                                <t t-if="employee.image_128">
-                                    <img t-attf-src="/web/image/hr.employee/{{ employee.id }}/image_128"
-                                         class="ess-profile-avatar" t-att-alt="employee.name"/>
-                                </t>
-                                <t t-else="">
-                                    <div class="ess-profile-avatar-fallback">
-                                        <i class="fa fa-user fa-3x"/>
-                                    </div>
-                                </t>
-                            </div>
-                            <div class="ess-profile-name"><t t-esc="employee.name"/></div>
+                            <a href="/my/profile" style="text-decoration: none; color: inherit;" title="View &amp; Edit Profile">
+                                <div class="ess-profile-avatar-wrap">
+                                    <t t-if="employee.image_128 or employee.avatar_128">
+                                        <img t-att-src="image_data_uri(employee.avatar_128 or employee.image_128)"
+                                             class="ess-profile-avatar" t-att-alt="employee.name"/>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="ess-profile-avatar-fallback">
+                                            <i class="fa fa-user fa-3x"/>
+                                        </div>
+                                    </t>
+                                </div>
+                                <div class="ess-profile-name"><t t-esc="employee.name"/></div>
+                            </a>
                             <div class="ess-profile-job">
                                 <t t-esc="employee.job_title or (employee.job_id and employee.job_id.name) or 'Employee'"/>
                             </div>
                             
-                            <div class="ess-profile-joined mt-3 mb-4">
+                            <div class="ess-profile-joined mt-3 mb-3">
                                 Joined <strong class="text-dark"><t t-esc="employee.create_date.strftime('%b %Y') if employee.create_date else 'Recently'"/></strong>
                             </div>
+
+                            <!-- My Profile Edit Button -->
+                            <a href="/my/profile" class="btn btn-sm w-100 font-weight-bold shadow-sm mb-3" style="border-radius: 8px; font-size: 0.82rem; border: 1.5px solid #6d28d9; color: #6d28d9; background: #ffffff; transition: all 0.2s;">
+                                <i class="fa fa-user-circle me-1"/> View &amp; Edit Profile
+                            </a>
 
                             <div class="ess-profile-contact-list">
                                 <t t-if="employee.work_phone">
@@ -185,6 +192,17 @@
                                     <div class="ess-split-value text-dark"><i class="fa fa-search text-muted" style="font-size:16px;"/></div>
                                 </div>
                             </a>
+
+                            <!-- 4. Profile Card -->
+                            <a href="/my/profile" class="ess-split-card">
+                                <div class="ess-split-icon-area" style="background-color: #06b6d4;">
+                                    <i class="fa fa-user-circle fa-2x text-white"/>
+                                </div>
+                                <div class="ess-split-text-area">
+                                    <div class="ess-split-title" style="color: #06b6d4;">Profile</div>
+                                    <div class="ess-split-value text-dark"><i class="fa fa-id-card-o text-muted" style="font-size:16px;"/></div>
+                                </div>
+                            </a>
                             
                             <!-- 5. Approvals (Only for Approvers) -->
                             <t t-if="request.env.user.has_group('ucs_portal_self_service.group_portal_approvals')">
@@ -307,6 +325,26 @@
                         </div>
                     </t>
 
+                    <!-- Manager Action Center Summary Card -->
+                    <t t-if="is_employee and request.env.user.has_group('ucs_portal_self_service.group_portal_approvals') and total_pending_approvals and total_pending_approvals &gt; 0">
+                        <div class="card border-0 shadow mt-4" style="border-radius: 10px; background-color: #4c1d95 !important; background-image: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%) !important; color: #ffffff !important;">
+                            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: transparent !important;">
+                                <div>
+                                    <span class="badge bg-warning text-dark font-weight-bold mb-2 px-2 py-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">MANAGER ACTION CENTER</span>
+                                    <h5 class="font-weight-bold mb-2" style="font-size: 1.15rem; color: #ffffff !important;"><i class="fa fa-bell me-2" style="color: #fbbf24 !important;"/> You have <t t-esc="total_pending_approvals"/> pending approval(s) requiring action</h5>
+                                    <div class="d-flex gap-3 align-items-center font-weight-bold" style="color: #f3e8ff !important; font-size: 0.85rem;">
+                                        <t t-if="pending_ts_count &gt; 0"><span class="me-3" style="color: #f3e8ff !important;">⚡ <t t-esc="pending_ts_count"/> Timesheet(s)</span></t>
+                                        <t t-if="pending_leave_count &gt; 0"><span class="me-3" style="color: #f3e8ff !important;">⚡ <t t-esc="pending_leave_count"/> Leave(s)</span></t>
+                                        <t t-if="pending_reg_count &gt; 0"><span style="color: #f3e8ff !important;">⚡ <t t-esc="pending_reg_count"/> Regularization(s)</span></t>
+                                    </div>
+                                </div>
+                                <a href="/my/approvals" class="btn btn-light font-weight-bold shadow px-4 py-2" style="color: #4c1d95 !important; border-radius: 6px; background-color: #ffffff !important;">
+                                    Go to Approvals <i class="fa fa-arrow-right ms-1"/>
+                                </a>
+                            </div>
+                        </div>
+                    </t>
+
                     <!-- Middle Grid: Team Task Deadlines & Team Leaves -->
                     <t t-if="is_employee">
                         <div class="row mt-4">
@@ -337,7 +375,7 @@
                                                                 <td class="py-3 px-2">
                                                                     <div class="d-flex align-items-center">
                                                                         <t t-foreach="task.user_ids[:3]" t-as="user_assign">
-                                                                            <img t-attf-src="/web/image/res.users/{{ user_assign.id }}/avatar_128" 
+                                                                            <img t-attf-src="/web/image/res.users/#{user_assign.id}/avatar_128" 
                                                                                  style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: -8px; border: 2px solid #fff;" 
                                                                                  t-att-title="user_assign.name"/>
                                                                         </t>
@@ -402,7 +440,7 @@
                                                                 <td class="py-3 px-2">
                                                                     <div class="d-flex align-items-center">
                                                                         <t t-foreach="task.user_ids[:3]" t-as="user_assign">
-                                                                            <img t-attf-src="/web/image/res.users/{{ user_assign.id }}/avatar_128" 
+                                                                            <img t-attf-src="/web/image/res.users/#{user_assign.id}/avatar_128" 
                                                                                  style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: -8px; border: 2px solid #fff;" 
                                                                                  t-att-title="user_assign.name"/>
                                                                         </t>
@@ -466,10 +504,23 @@
                                             </t>
                                         </div>
                                     </t>
-                                    <t t-else="">
-                                        <div class="py-3">
-                                            <div style="font-size: 3rem; margin-bottom: 10px;">🎂</div>
-                                            <div class="text-muted font-weight-bold" style="font-size: 0.9rem;">No Upcoming Birthdays</div>
+                                    <t t-if="upcoming_anniversaries">
+                                        <div class="mt-3 pt-3 border-top">
+                                            <h6 class="font-weight-bold text-dark mb-3" style="font-size: 0.85rem;"><i class="fa fa-trophy text-warning me-1"/> Work Anniversaries</h6>
+                                            <t t-foreach="upcoming_anniversaries" t-as="anniv">
+                                                <div class="d-flex align-items-center justify-content-center mb-2">
+                                                    <img t-attf-src="{{ anniv.get('image_url', '/web/static/img/placeholder.png') }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px;"/>
+                                                    <div class="text-left">
+                                                        <div class="font-weight-bold text-dark" style="font-size: 0.8rem;"><t t-esc="anniv.get('name')"/></div>
+                                                        <t t-if="anniv.get('is_today')">
+                                                            <div class="badge bg-success text-white font-weight-bold" style="font-size: 0.7rem;">Celebrating <t t-esc="anniv.get('years')"/> Year(s) Today! 🎉</div>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <div class="text-primary font-weight-bold" style="font-size: 0.7rem;"><t t-esc="anniv.get('years')"/> Year(s) on <t t-esc="anniv.get('date_str')"/> 🎈</div>
+                                                        </t>
+                                                    </div>
+                                                </div>
+                                            </t>
                                         </div>
                                     </t>
                                 </div>
@@ -699,6 +750,15 @@
                 </div>
             </div>
         </t>
+    </template>
+
+    <!-- User Header Dropdown Profile Link Inheritance -->
+    <template id="user_dropdown_inherited_profile" inherit_id="portal.user_dropdown">
+        <xpath expr="//div[@id='o_logout_divider']" position="before">
+            <a href="/my/profile" role="menuitem" class="dropdown-item ps-3">
+                <i class="fa fa-fw fa-user me-1 small text-primary-emphasis"/> My Profile
+            </a>
+        </xpath>
     </template>
 
 </odoo>

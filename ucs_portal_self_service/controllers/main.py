@@ -197,6 +197,62 @@ class CustomCustomerPortal(CustomerPortal):
             upcoming_birthdays.sort(key=lambda x: x['days_until'])
             values['upcoming_birthdays'] = upcoming_birthdays
 
+            # Work Anniversaries Recognition (Only show employees completing >= 1 year on their anniversary month/day)
+            upcoming_anniversaries = []
+            all_employees = request.env['hr.employee'].sudo().search([('active', '=', True)])
+            for emp in all_employees:
+                join_date = getattr(emp, 'contract_date_start', False) or getattr(emp, 'date_start', False) or getattr(emp, 'first_contract_date', False) or (emp.create_date.date() if emp.create_date else False)
+                if join_date:
+                    years = today.year - join_date.year
+                    if years > 0 and join_date.month == today.month and join_date.day == today.day:
+                        is_today = True
+                        upcoming_anniversaries.append({
+                            'name': emp.name,
+                            'years': years,
+                            'is_today': is_today,
+                            'join_date_str': join_date.strftime('%b %Y'),
+                            'date_str': join_date.strftime('%d %B'),
+                            'image_url': f'/web/image/hr.employee/{emp.id}/image_128'
+                        })
+            upcoming_anniversaries.sort(key=lambda x: (not x['is_today'], x['date_str']))
+            values['upcoming_anniversaries'] = upcoming_anniversaries
+
+            # Manager Action Center Pending Counts matching Approval controllers exactly
+            is_admin_ts = user.has_group('base.group_erp_manager') or user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_admin') or user.has_group('hr_timesheet.group_timesheet_manager') or user.has_group('hr_timesheet.group_hr_timesheet_approver')
+            is_mgr_ts = user.has_group('ucs_employee_timesheet_approval.group_portal_timesheet_approval_manager')
+            if is_admin_ts:
+                ts_dom = [('state', '=', 'confirm'), ('project_id', '!=', False)]
+            elif is_mgr_ts:
+                ts_dom = [('state', '=', 'confirm'), ('project_id', '!=', False), ('employee_id.parent_id.user_id', '=', user.id)]
+            else:
+                ts_dom = [('id', '=', 0)]
+            pending_ts = request.env['account.analytic.line'].sudo().search_count(ts_dom)
+
+            is_admin_lv = user.has_group('base.group_erp_manager') or user.has_group('ucs_employee_leave_management.group_portal_leave_approval_admin') or user.has_group('hr_holidays.group_hr_holidays_user') or user.has_group('hr_holidays.group_hr_holidays_responsible')
+            is_mgr_lv = user.has_group('ucs_employee_leave_management.group_portal_leave_approval_manager')
+            if is_admin_lv:
+                lv_dom = [('state', '=', 'confirm')]
+            elif is_mgr_lv:
+                lv_dom = [('state', '=', 'confirm'), ('employee_id.parent_id.user_id', '=', user.id)]
+            else:
+                lv_dom = [('id', '=', 0)]
+            pending_lv = request.env['hr.leave'].sudo().search_count(lv_dom)
+
+            is_admin_rg = user.has_group('base.group_erp_manager') or user.has_group('ucs_attendance_regularize.group_attendance_regularize_admin') or user.has_group('hr_attendance.group_hr_attendance_officer')
+            is_mgr_rg = user.has_group('ucs_attendance_regularize.group_attendance_regularize_manager')
+            if is_admin_rg:
+                rg_dom = [('state', 'in', ['submit', 'manager_approve'])]
+            elif is_mgr_rg:
+                rg_dom = [('state', 'in', ['submit', 'manager_approve']), '|', ('manager_id.user_id', '=', user.id), ('employee_id.parent_id.user_id', '=', user.id)]
+            else:
+                rg_dom = [('id', '=', 0)]
+            pending_rg = request.env['attendance.regularize'].sudo().search_count(rg_dom)
+
+            values['pending_ts_count'] = pending_ts
+            values['pending_leave_count'] = pending_lv
+            values['pending_reg_count'] = pending_rg
+            values['total_pending_approvals'] = pending_ts + pending_lv + pending_rg
+
             # Hierarchy Tasks Logic
             values['hierarchy_tasks'] = request.env['project.task'].sudo().browse()
             values['tasks_heading'] = "Task Deadlines"

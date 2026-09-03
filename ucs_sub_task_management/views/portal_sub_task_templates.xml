@@ -102,14 +102,21 @@
                                             </div>
                                         </div>
 
-                                        <t t-if="dev_alloc_hrs &gt; 0">
+                                        <t t-if="(dev_alloc_hrs or 0) &gt; 0">
                                             <div class="mb-4">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <small class="text-muted font-weight-bold">Time Spent Progress</small>
-                                                    <small class="font-weight-bold text-primary"><t t-esc="prog_pct"/>%</small>
+                                                    <div>
+                                                        <small t-attf-class="font-weight-bold #{'text-success' if prog_pct &lt; 80 else ('text-warning' if prog_pct &lt;= 100 else 'text-danger')}"><t t-esc="prog_pct"/>%</small>
+                                                        <t t-if="remaining_hrs &lt; 0">
+                                                            <span class="badge bg-danger ms-2" style="font-size: 0.75rem;">
+                                                                <i class="fa fa-exclamation-triangle"/> Overspent by +<t t-esc="abs(remaining_hrs)" t-options='{"widget": "float_time"}'/>
+                                                            </span>
+                                                        </t>
+                                                    </div>
                                                 </div>
-                                                <div class="progress" style="height: 6px; border-radius: 4px; background: #e2e8f0;">
-                                                    <div class="progress-bar bg-primary" role="progressbar" t-attf-style="width: #{prog_pct}%; border-radius: 4px;" t-att-aria-valuenow="prog_pct" aria-valuemin="0" aria-valuemax="100"></div>
+                                                <div class="progress" style="height: 8px; border-radius: 4px; background: #e2e8f0;">
+                                                    <div t-attf-class="progress-bar #{'bg-success' if prog_pct &lt; 80 else ('bg-warning' if prog_pct &lt;= 100 else 'bg-danger')}" role="progressbar" t-attf-style="width: #{min(100.0, prog_pct)}%; border-radius: 4px;" t-att-aria-valuenow="prog_pct" aria-valuemin="0" aria-valuemax="100"></div>
                                                 </div>
                                             </div>
                                         </t>

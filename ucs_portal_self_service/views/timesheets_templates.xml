@@ -224,8 +224,8 @@
                                                     <span class="badge bg-success text-white">Approved</span>
                                                 </t>
                                                 <t t-elif="ts.state == 'refused'">
-                                                    <span class="badge bg-danger text-white">Refused</span>
-                                                    <i class="fa fa-info-circle text-danger ms-1" t-if="ts.reject_reason" t-att-title="ts.reject_reason" data-bs-toggle="tooltip"></i>
+                                                    <span class="badge bg-danger text-white" t-att-title="'Reason: ' + (ts.reject_reason or '')" data-bs-toggle="tooltip">Refused <i class="fa fa-info-circle ms-1" t-if="ts.reject_reason"/></span>
+                                                    <div class="small text-danger mt-1 font-italic" style="font-size: 0.78rem;" t-if="ts.reject_reason"><i class="fa fa-comment-o me-1"/><t t-esc="ts.reject_reason"/></div>
                                                 </t>
                                                 <t t-else="">
                                                     <span class="badge bg-secondary text-white"><t t-esc="ts.state or 'Draft'"/></span>

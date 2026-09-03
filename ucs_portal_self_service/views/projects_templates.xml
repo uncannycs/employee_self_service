@@ -587,6 +587,13 @@
                                                 </t>
                                             </div>
                                         </t>
+                                        <t t-if="len(task.child_ids) &gt; 0">
+                                            <div class="mt-1">
+                                                <a t-attf-href="/my/tasks/#{task.id}" class="badge rounded-pill px-2 py-1 text-decoration-none" style="background-color: #f3e8ff; color: #6d28d9; border: 1px solid #d8b4fe; font-size: 0.72rem; font-weight: 600;" title="View Sub-tasks">
+                                                    <i class="fa fa-sitemap me-1"/> <t t-esc="len(task.child_ids)"/> Sub-task(s)
+                                                </a>
+                                            </div>
+                                        </t>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
                                             <small class="text-muted">
                                                 <t t-if="is_employee or request.env.user.has_group('ucs_portal_self_service.group_custom_project_manager')">
@@ -739,6 +746,11 @@
                                                 <a t-attf-href="/my/tasks/#{task.id}" class="font-weight-bold text-decoration-none" style="color: var(--ess-primary, #4a148c); font-size: 0.95rem;">
                                                     <i class="fa fa-tasks me-2 text-muted"/> <t t-esc="task.name"/>
                                                 </a>
+                                                <t t-if="len(task.child_ids) &gt; 0">
+                                                    <span class="badge rounded-pill ms-2 px-2 py-1" style="background-color: #f3e8ff; color: #6d28d9; border: 1px solid #d8b4fe; font-size: 0.72rem; font-weight: 600;">
+                                                        <i class="fa fa-sitemap me-1"/> <t t-esc="len(task.child_ids)"/> Sub-task(s)
+                                                    </span>
+                                                </t>
                                             </td>
                                             <td style="padding: 12px 15px;">
                                                 <span class="badge badge-light text-primary" style="background: var(--ess-light); color: var(--ess-violet); font-size: 0.85rem;"><t t-esc="task.stage_id.name if task.stage_id else '-'"/></span>
