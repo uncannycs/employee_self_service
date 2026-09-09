@@ -385,11 +385,34 @@ class CustomCustomerPortal(CustomerPortal):
 
         total_pages = (total + per_page - 1) // per_page
 
+        today = date.today()
+        selected_month = int(kw.get('month') or today.month)
+        selected_year = int(kw.get('year') or today.year)
+
+        months_list = [
+            (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+            (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+            (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+        ]
+        years_list = list(range(today.year - 2, today.year + 2))
+
+        reg_assign = getattr(employee, 'regularize_request_assign', 0)
+        reg_used = getattr(employee, 'regularize_req_used', 0)
+        reg_remaining = max(0, reg_assign - reg_used)
+
         values = {
             'employee': employee,
             'attendances': attendances,
             'page': int(page),
             'total_pages': total_pages,
+            'regularize_assign': reg_assign,
+            'regularize_used': reg_used,
+            'regularize_remaining': reg_remaining,
+            'selected_month': selected_month,
+            'selected_year': selected_year,
+            'months_list': months_list,
+            'years_list': years_list,
+            'csrf_token': request.csrf_token(),
         }
         return request.render('ucs_portal_self_service.portal_attendance_history', values)
 

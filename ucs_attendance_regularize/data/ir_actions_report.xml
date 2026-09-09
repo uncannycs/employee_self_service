@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_monthly_attendance_card" model="ir.actions.report">
+        <field name="name">Monthly Attendance Card</field>
+        <field name="model">hr.employee</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ucs_attendance_regularize.report_monthly_attendance_card</field>
+        <field name="report_file">ucs_attendance_regularize.report_monthly_attendance_card</field>
+        <field name="print_report_name">'Attendance_Card_%s' % (object.name)</field>
+    </record>
+</odoo>
