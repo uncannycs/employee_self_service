@@ -116,7 +116,7 @@ class PortalCustomLeaves(CustomerPortal):
         }
         return request.render("ucs_employee_leave_management.portal_my_leaves", values)
 
-    @http.route('/my/leaves/get_events', type='json', auth='user')
+    @http.route('/my/leaves/get_events', type='jsonrpc', auth='user')
     def get_leave_events(self, start, end, **kw):
         user = request.env.user
         employee = _get_employee(user)
@@ -209,6 +209,8 @@ class PortalCustomLeaves(CustomerPortal):
                 'number_of_hours': leave.number_of_hours,
                 'reason': leave.name or '',
                 'attachments': att_list,
+                'cancellation_requested': bool(leave.cancellation_requested),
+                'cancellation_reason': leave.cancellation_reason or '',
             })
             
         # Public holidays
@@ -334,6 +336,38 @@ class PortalCustomLeaves(CustomerPortal):
                                     raise Exception(f"Insufficient leave balance. You only have {remaining} day(s) available, but requested {requested} day(s).")
                         break
 
+                # Mandatory Attachment Check (e.g. Sick Leave > 2 days)
+                is_sick_lt = 'sick' in (leave_type.name or '').lower()
+                is_mandatory_att = getattr(leave_type, 'mandatory_attachment', False) or getattr(leave_type, 'support_document', False) or is_sick_lt
+                raw_min_days = getattr(leave_type, 'mandatory_attachment_min_days', 2.0)
+                min_days_att = float(raw_min_days or 2.0)
+                
+                duration_days = 0.5 if is_half_day else (dt.date() - df.date()).days + 1
+                
+                # Save Uploaded Attachments FIRST so they exist before hr.leave creation & constraints
+                files = request.httprequest.files.getlist('attachment')
+                if not files:
+                    file_single = request.httprequest.files.get('attachment')
+                    if file_single:
+                        files = [file_single]
+
+                attachment_ids = []
+                for file in files:
+                    if file and getattr(file, 'filename', False):
+                        file_data = file.read()
+                        if file_data:
+                            base64_data = base64.b64encode(file_data).decode('utf-8')
+                            attachment = request.env['ir.attachment'].sudo().create({
+                                'name': file.filename,
+                                'datas': base64_data,
+                                'res_model': 'hr.leave',
+                            })
+                            attachment_ids.append(attachment.id)
+
+                if is_mandatory_att and duration_days > min_days_att and not attachment_ids:
+                    disp_min = int(min_days_att) if min_days_att.is_integer() else min_days_att
+                    raise Exception(f"Attachment is mandatory for '{leave_type.name}' when leave duration ({duration_days} days) exceeds {disp_min} days.")
+
                 create_vals = {
                     'employee_id': employee.id,
                     'holiday_status_id': leave_type_id,
@@ -352,37 +386,20 @@ class PortalCustomLeaves(CustomerPortal):
                 else:
                     create_vals['date_from'] = start_dt
                     create_vals['date_to'] = end_dt
-                    
-                leave_record = request.env['hr.leave'].sudo().create(create_vals)
-                if leave_record.state == 'validate':
-                    leave_record.sudo().write({'state': 'confirm'})
-
-                # Save Uploaded Attachments & Link to hr.leave for backend & portal visibility
-                files = request.httprequest.files.getlist('attachment')
-                if not files:
-                    file_single = request.httprequest.files.get('attachment')
-                    if file_single:
-                        files = [file_single]
-
-                attachment_ids = []
-                for file in files:
-                    if file and getattr(file, 'filename', False):
-                        file_data = file.read()
-                        if file_data:
-                            base64_data = base64.b64encode(file_data).decode('utf-8')
-                            attachment = request.env['ir.attachment'].sudo().create({
-                                'name': file.filename,
-                                'datas': base64_data,
-                                'res_model': 'hr.leave',
-                                'res_id': leave_record.id,
-                            })
-                            attachment_ids.append(attachment.id)
 
                 if attachment_ids:
-                    if hasattr(leave_record, 'supported_attachment_ids'):
-                        leave_record.sudo().write({'supported_attachment_ids': [(6, 0, attachment_ids)]})
-                    if hasattr(leave_record, 'attachment_ids'):
-                        leave_record.sudo().write({'attachment_ids': [(6, 0, attachment_ids)]})
+                    if hasattr(request.env['hr.leave'], 'supported_attachment_ids'):
+                        create_vals['supported_attachment_ids'] = [(6, 0, attachment_ids)]
+                    if hasattr(request.env['hr.leave'], 'attachment_ids'):
+                        create_vals['attachment_ids'] = [(6, 0, attachment_ids)]
+                    
+                leave_record = request.env['hr.leave'].sudo().create(create_vals)
+
+                if attachment_ids:
+                    request.env['ir.attachment'].sudo().browse(attachment_ids).write({'res_id': leave_record.id})
+
+                if leave_record.state == 'validate':
+                    leave_record.sudo().write({'state': 'confirm'})
 
                 # Flush the environment to trigger any @api.constrains (like overlap checks)
                 # so that the exception is caught here instead of at the end of the request.
@@ -481,14 +498,22 @@ class PortalCustomLeaves(CustomerPortal):
 
                 leave.sudo().write(update_vals)
 
-                # Save new attachments if uploaded
+                # Mandatory Attachment Check (e.g. Sick Leave > 2 days)
+                lt = leave.holiday_status_id
+                is_sick_lt = 'sick' in (lt.name or '').lower()
+                is_mandatory_att = getattr(lt, 'mandatory_attachment', False) or getattr(lt, 'support_document', False) or is_sick_lt
+                raw_min_days = getattr(lt, 'mandatory_attachment_min_days', 2.0)
+                min_days_att = float(raw_min_days or 2.0)
+                duration_days = 0.5 if is_half_day else (dt.date() - df.date()).days + 1
+
+                # Save new attachments FIRST if uploaded
                 files = request.httprequest.files.getlist('attachment')
                 if not files:
                     file_single = request.httprequest.files.get('attachment')
                     if file_single:
                         files = [file_single]
 
-                attachment_ids = []
+                new_attachment_ids = []
                 for file in files:
                     if file and getattr(file, 'filename', False):
                         file_data = file.read()
@@ -500,16 +525,26 @@ class PortalCustomLeaves(CustomerPortal):
                                 'res_model': 'hr.leave',
                                 'res_id': leave.id,
                             })
-                            attachment_ids.append(attachment.id)
+                            new_attachment_ids.append(attachment.id)
 
-                if attachment_ids:
-                    existing_atts = leave.supported_attachment_ids.ids if hasattr(leave, 'supported_attachment_ids') else []
-                    all_atts = list(set(existing_atts + attachment_ids))
+                existing_atts = (
+                    (hasattr(leave, 'supported_attachment_ids') and leave.supported_attachment_ids) or
+                    (hasattr(leave, 'attachment_ids') and leave.attachment_ids) or
+                    request.env['ir.attachment'].sudo().search([('res_model', '=', 'hr.leave'), ('res_id', '=', leave.id)])
+                )
+                all_att_ids = list(set((existing_atts.ids if hasattr(existing_atts, 'ids') else []) + new_attachment_ids))
+
+                if is_mandatory_att and duration_days > min_days_att and not all_att_ids:
+                    disp_min = int(min_days_att) if min_days_att.is_integer() else min_days_att
+                    raise Exception(f"Attachment is mandatory for '{lt.name}' when leave duration ({duration_days} days) exceeds {disp_min} days.")
+
+                if all_att_ids:
                     if hasattr(leave, 'supported_attachment_ids'):
-                        leave.sudo().write({'supported_attachment_ids': [(6, 0, all_atts)]})
+                        update_vals['supported_attachment_ids'] = [(6, 0, all_att_ids)]
                     if hasattr(leave, 'attachment_ids'):
-                        leave.sudo().write({'attachment_ids': [(6, 0, all_atts)]})
+                        update_vals['attachment_ids'] = [(6, 0, all_att_ids)]
 
+                leave.sudo().write(update_vals)
                 request.env.flush_all()
         except Exception as e:
             request.env.cr.rollback()
@@ -535,22 +570,82 @@ class PortalCustomLeaves(CustomerPortal):
             domain.append(('employee_id', '=', employee.id))
 
         leave = request.env['hr.leave'].sudo().search(domain, limit=1)
+        reason = kw.get('reason') or kw.get('cancellation_reason') or ''
         
         if leave:
             try:
-                # In Odoo, refusing/cancelling a leave releases the allocated balance properly
-                if hasattr(leave, 'action_refuse'):
-                    leave.sudo().action_refuse()
-                elif hasattr(leave, 'action_cancel'):
-                    leave.sudo().action_cancel()
+                # If leave is already validated (approved), route to manager for cancellation approval
+                if leave.state == 'validate':
+                    leave.sudo().action_request_cancellation(reason=reason)
                 else:
-                    leave.sudo().write({'state': 'refuse'})
+                    # For non-validated pending leaves, refuse/cancel directly
+                    if hasattr(leave, 'action_refuse'):
+                        leave.sudo().action_refuse()
+                    elif hasattr(leave, 'action_cancel'):
+                        leave.sudo().action_cancel()
+                    else:
+                        leave.sudo().write({'state': 'refuse'})
             except Exception as e:
                 try:
-                    leave.sudo().write({'state': 'refuse'})
+                    if leave.state == 'validate':
+                        leave.sudo().write({'cancellation_requested': True, 'cancellation_reason': reason})
+                    else:
+                        leave.sudo().write({'state': 'refuse'})
                 except Exception as ex:
                     import urllib.parse
                     error_msg = str(ex).replace('\n', ' ')
                     return request.redirect('/my/leaves?error=' + urllib.parse.quote(error_msg))
             
         return request.redirect('/my/leaves')
+
+    @http.route('/my/leaves/check_collision', type='jsonrpc', auth='user')
+    def check_team_leave_collision(self, date_from=None, date_to=None, leave_id=None, **kw):
+        user = request.env.user
+        employee = _get_employee(user)
+        if not employee or not date_from:
+            return {'collisions': []}
+
+        try:
+            df = datetime.strptime(date_from, '%Y-%m-%d').date()
+            dt = datetime.strptime(date_to or date_from, '%Y-%m-%d').date()
+        except Exception:
+            return {'collisions': []}
+
+        team_domain = [('id', '!=', employee.id)]
+        if employee.department_id:
+            team_domain.append(('department_id', '=', employee.department_id.id))
+        elif employee.parent_id:
+            team_domain.append(('parent_id', '=', employee.parent_id.id))
+        else:
+            return {'collisions': []}
+
+        team_employees = request.env['hr.employee'].sudo().search(team_domain)
+        if not team_employees:
+            return {'collisions': []}
+
+        leave_domain = [
+            ('employee_id', 'in', team_employees.ids),
+            ('state', 'in', ['validate', 'validate1']),
+            ('request_date_from', '<=', dt),
+            ('request_date_to', '>=', df),
+        ]
+        if leave_id:
+            leave_domain.append(('id', '!=', int(leave_id)))
+
+        colliding_leaves = request.env['hr.leave'].sudo().search(leave_domain)
+        collisions = []
+        for l in colliding_leaves:
+            f_str = l.request_date_from.strftime('%d %b %Y') if l.request_date_from else (l.date_from.strftime('%d %b %Y') if l.date_from else '')
+            t_str = l.request_date_to.strftime('%d %b %Y') if l.request_date_to else (l.date_to.strftime('%d %b %Y') if l.date_to else '')
+            date_range = f_str if f_str == t_str else f"{f_str} to {t_str}"
+            collisions.append({
+                'employee_name': l.employee_id.name,
+                'leave_type': l.holiday_status_id.name,
+                'date_range': date_range,
+                'department': l.employee_id.department_id.name or '',
+            })
+
+        return {
+            'collisions': collisions,
+            'department_name': employee.department_id.name or 'your team'
+        }

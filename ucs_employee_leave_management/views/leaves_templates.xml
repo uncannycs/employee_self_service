@@ -185,7 +185,11 @@
                                                 </t>
                                             </td>
                                             <td>
-                                                <t t-if="leave.state == 'validate'">
+                                                <t t-if="leave.cancellation_requested">
+                                                    <span class="badge bg-success text-white me-1">Approved</span>
+                                                    <span class="badge bg-warning text-dark d-inline-block mt-1">Cancellation Requested</span>
+                                                </t>
+                                                <t t-elif="leave.state == 'validate'">
                                                     <span class="badge bg-success text-white">Approved</span>
                                                 </t>
                                                 <t t-elif="leave.state == 'refuse'">
@@ -211,9 +215,25 @@
                                                         </button>
                                                     </t>
                                                     <t t-if="leave.state not in ['refuse']">
-                                                        <a t-attf-href="/my/leaves/cancel/#{leave.id}" t-attf-class="btn btn-sm #{'btn-outline-danger' if leave.state != 'validate' else 'btn-outline-warning'}" style="border-radius: 6px;" t-attf-onclick="return confirm('#{'Are you sure you want to cancel this leave request?' if leave.state != 'validate' else 'Are you sure you want to request cancellation for this approved leave?'}');">
-                                                            <i class="fa fa-times me-1"/> <t t-esc="'Cancel' if leave.state != 'validate' else 'Request Cancellation'"/>
-                                                        </a>
+                                                        <t t-if="leave.cancellation_requested">
+                                                            <span class="btn btn-sm btn-light text-muted disabled" style="border-radius: 6px;">
+                                                                <i class="fa fa-clock-o me-1"/> Cancellation Pending
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <t t-if="leave.state == 'validate'">
+                                                                <a href="#" class="btn btn-sm btn-outline-warning" style="border-radius: 6px;"
+                                                                   t-att-data-leave-id="leave.id"
+                                                                   onclick="var r = prompt('Please provide a reason for requesting cancellation of this approved leave:'); if(r !== null) { window.location.href = '/my/leaves/cancel/' + this.getAttribute('data-leave-id') + '?reason=' + encodeURIComponent(r); } return false;">
+                                                                    <i class="fa fa-times me-1"/> Request Cancellation
+                                                                </a>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <a t-attf-href="/my/leaves/cancel/#{leave.id}" class="btn btn-sm btn-outline-danger" style="border-radius: 6px;" onclick="return confirm('Are you sure you want to cancel this leave request?');">
+                                                                    <i class="fa fa-times me-1"/> Cancel
+                                                                </a>
+                                                            </t>
+                                                        </t>
                                                     </t>
                                                 </div>
                                             </td>
@@ -386,7 +406,14 @@
                                     <select class="form-control" name="holiday_status_id" id="holiday_status_id" required="1">
                                         <option value="" data-request-unit="day">-- Select Leave Type --</option>
                                         <t t-foreach="leave_types" t-as="ltype">
-                                            <option t-att-value="ltype.id" t-att-data-request-unit="ltype.request_unit"><t t-esc="ltype.name"/></option>
+                                            <t t-set="is_mand_att" t-value="ltype.mandatory_attachment or ltype.support_document or ('sick' in (ltype.name or '').lower())"/>
+                                            <t t-set="min_days_att" t-value="ltype.mandatory_attachment_min_days or 2.0"/>
+                                            <option t-att-value="ltype.id" 
+                                                    t-att-data-request-unit="ltype.request_unit"
+                                                    t-att-data-mandatory-att="'true' if is_mand_att else 'false'"
+                                                    t-att-data-min-days="min_days_att">
+                                                <t t-esc="ltype.name"/>
+                                            </option>
                                         </t>
                                     </select>
                                 </div>
@@ -434,6 +461,23 @@
                                                 <option value="am">Morning</option>
                                                 <option value="pm">Afternoon</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Team Leave Collision Warning Banner -->
+                                <div id="new_team_collision_warning" class="alert alert-warning border-warning shadow-sm mt-3 mb-3 d-none" style="border-radius: 8px; background-color: #fff8e6; border-left: 4px solid #f59e0b;">
+                                    <div class="d-flex align-items-start">
+                                        <span class="me-2 text-warning fs-5" style="color: #d97706 !important;">
+                                            <i class="fa fa-users"/>
+                                        </span>
+                                        <div>
+                                            <div class="font-weight-bold" style="color: #92400e; font-size: 0.9rem;">
+                                                <i class="fa fa-exclamation-triangle me-1"/> Team Leave Collision Warning
+                                            </div>
+                                            <div class="small text-muted mb-1" style="font-size: 0.8rem;">
+                                                Other team members in <span id="new_collision_dept_name" class="font-weight-bold">your team</span> are already on approved leave during this period:
+                                            </div>
+                                            <ul id="new_collision_list" class="mb-0 ps-3 small text-dark" style="font-size: 0.825rem; line-height: 1.4;"></ul>
                                         </div>
                                     </div>
                                 </div>
@@ -504,7 +548,17 @@
                                     <select class="form-control" name="holiday_status_id" id="edit_holiday_status_id" required="1">
                                         <option value="">-- Select Leave Type --</option>
                                         <t t-foreach="leave_types" t-as="ltype">
-                                            <option t-att-value="ltype.id"><t t-esc="ltype.name"/></option>
+                                            <t t-set="is_mand_att" t-value="ltype.mandatory_attachment or ltype.support_document or ('sick' in (ltype.name or '').lower())"/>
+                                            <t t-set="min_days_att" t-value="ltype.mandatory_attachment_min_days or 2.0"/>
+                                            <option t-att-value="ltype.id"
+                                                    t-att-data-request-unit="ltype.request_unit"
+                                                    t-att-data-mandatory-att="'true' if is_mand_att else 'false'"
+                                                    t-att-data-min-days="min_days_att">
+                                                <t t-esc="ltype.name"/>
+                                                <t t-if="is_mand_att">
+                                                    (Attachment required for &gt; <t t-esc="int(min_days_att) if min_days_att.is_integer() else min_days_att"/> days)
+                                                </t>
+                                            </option>
                                         </t>
                                     </select>
                                 </div>
@@ -532,6 +586,23 @@
                                                 <option value="am">Morning</option>
                                                 <option value="pm">Afternoon</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Team Leave Collision Warning Banner -->
+                                <div id="edit_team_collision_warning" class="alert alert-warning border-warning shadow-sm mt-3 mb-3 d-none" style="border-radius: 8px; background-color: #fff8e6; border-left: 4px solid #f59e0b;">
+                                    <div class="d-flex align-items-start">
+                                        <span class="me-2 text-warning fs-5" style="color: #d97706 !important;">
+                                            <i class="fa fa-users"/>
+                                        </span>
+                                        <div>
+                                            <div class="font-weight-bold" style="color: #92400e; font-size: 0.9rem;">
+                                                <i class="fa fa-exclamation-triangle me-1"/> Team Leave Collision Warning
+                                            </div>
+                                            <div class="small text-muted mb-1" style="font-size: 0.8rem;">
+                                                Other team members in <span id="edit_collision_dept_name" class="font-weight-bold">your team</span> are already on approved leave during this period:
+                                            </div>
+                                            <ul id="edit_collision_list" class="mb-0 ps-3 small text-dark" style="font-size: 0.825rem; line-height: 1.4;"></ul>
                                         </div>
                                     </div>
                                 </div>
@@ -605,9 +676,16 @@
                                 <label class="font-weight-bold text-dark small mb-1"><i class="fa fa-paperclip text-primary me-1"/> Attachments:</label>
                                 <div id="view_existing_attachments_list" class="d-flex flex-wrap gap-2"></div>
                             </div>
+                            <div id="view_cancellation_reason_wrapper" class="mb-3 d-none">
+                                <label class="font-weight-bold small mb-1" style="color: #856404;"><i class="fa fa-commenting text-warning me-1"/> Cancellation Reason:</label>
+                                <div class="p-2 rounded border text-dark font-weight-bold small" id="view_cancellation_reason" style="min-height: 40px; background-color: #fff8e6; border-color: #ffeba8 !important;">-</div>
+                            </div>
                         </div>
-                        <div class="modal-footer bg-white border-top-0 px-4 pb-4">
-                            <button type="button" class="btn" data-bs-dismiss="modal" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Close</button>
+                        <div class="modal-footer bg-white border-top-0 px-4 pb-4 d-flex justify-content-between align-items-center">
+                            <a id="view_cancel_leave_btn" href="#" class="btn btn-outline-warning d-none" onclick="return confirm('Are you sure you want to request cancellation for this approved leave?');" style="border-radius: 6px; font-weight: 500; padding: 8px 16px;">
+                                <i class="fa fa-times me-1"/> Request Cancellation
+                            </a>
+                            <button type="button" class="btn ms-auto" data-bs-dismiss="modal" style="background: var(--ess-primary, #4a148c); color: white; border-radius: 6px; font-weight: 500; padding: 8px 16px;">Close</button>
                         </div>
                     </div>
                 </div>
@@ -654,6 +732,10 @@
                         var cancelBtn = document.getElementById('edit_cancel_leave_btn');
                         if (cancelBtn) {
                             cancelBtn.href = '/my/leaves/cancel/' + leaveId;
+                        }
+
+                        if (typeof checkTeamCollision === 'function') {
+                            checkTeamCollision('edit_leave_date_from', 'edit_leave_date_to', 'edit_is_half_day', 'edit_team_collision_warning', 'edit_collision_dept_name', 'edit_collision_list', leaveId);
                         }
 
                         $('#editLeaveModal').modal('show');
@@ -728,10 +810,123 @@
                     }
                 }
 
+                function checkMandatoryAttachmentOnSubmit(formEl, selectId, dateFromId, dateToId, isHalfDayId, fileInputName, isEdit) {
+                    var sel = document.getElementById(selectId);
+                    if (!sel || !sel.options[sel.selectedIndex]) return true;
+                    var opt = sel.options[sel.selectedIndex];
+                    var isMandatory = opt.getAttribute('data-mandatory-att') === 'true';
+                    var minDays = parseFloat(opt.getAttribute('data-min-days') || '2.0');
+                    
+                    if (isMandatory) {
+                        var isHalf = isHalfDayId ? (document.getElementById(isHalfDayId) &amp;&amp; document.getElementById(isHalfDayId).checked) : false;
+                        var dFrom = document.getElementById(dateFromId) ? document.getElementById(dateFromId).value : '';
+                        var dTo = document.getElementById(dateToId) ? document.getElementById(dateToId).value : dFrom;
+                        
+                        var totalDays = 1.0;
+                        if (isHalf) {
+                            totalDays = 0.5;
+                        } else if (dFrom &amp;&amp; dTo) {
+                            var dt1 = new Date(dFrom);
+                            var dt2 = new Date(dTo);
+                            totalDays = Math.round((dt2 - dt1) / (1000 * 60 * 60 * 24)) + 1;
+                        }
+                        
+                        if (totalDays &gt; minDays) {
+                            var fileInput = formEl.querySelector('input[type="file"][name="' + fileInputName + '"]');
+                            var hasNewFile = fileInput &amp;&amp; fileInput.files &amp;&amp; fileInput.files.length &gt; 0;
+                            if (isEdit) {
+                                var attsList = document.getElementById('edit_existing_attachments_list');
+                                var hasExisting = attsList &amp;&amp; attsList.children &amp;&amp; attsList.children.length &gt; 0;
+                                if (!hasNewFile &amp;&amp; !hasExisting) {
+                                    alert("Attachment is mandatory for '" + opt.text.trim() + "' when duration (" + totalDays + " days) exceeds " + minDays + " days.");
+                                    return false;
+                                }
+                            } else {
+                                if (!hasNewFile) {
+                                    alert("Attachment is mandatory for '" + opt.text.trim() + "' when duration (" + totalDays + " days) exceeds " + minDays + " days.");
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                }
+
+                function checkTeamCollision(dateFromId, dateToId, isHalfDayId, warningWrapId, deptNameId, listId, leaveId) {
+                    var dFromEl = document.getElementById(dateFromId);
+                    var dToEl = document.getElementById(dateToId);
+                    var isHalfEl = isHalfDayId ? document.getElementById(isHalfDayId) : null;
+                    
+                    var dFrom = dFromEl ? dFromEl.value : '';
+                    var isHalf = isHalfEl ? isHalfEl.checked : false;
+                    var dTo = isHalf ? dFrom : (dToEl ? dToEl.value : dFrom);
+                    
+                    var wrap = document.getElementById(warningWrapId);
+                    var deptEl = document.getElementById(deptNameId);
+                    var listEl = document.getElementById(listId);
+
+                    if (!dFrom || !wrap || !listEl) return;
+
+                    fetch('/my/leaves/check_collision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'call',
+                            params: {
+                                date_from: dFrom,
+                                date_to: dTo,
+                                leave_id: leaveId || null
+                            }
+                        })
+                    }).then(function(res) { return res.json(); })
+                      .then(function(data) {
+                          if (data &amp;&amp; data.result &amp;&amp; data.result.collisions &amp;&amp; data.result.collisions.length &gt; 0) {
+                              if (deptEl) deptEl.textContent = data.result.department_name || 'your team';
+                              listEl.innerHTML = '';
+                              data.result.collisions.forEach(function(c) {
+                                  var li = document.createElement('li');
+                                  li.innerHTML = '&lt;strong&gt;' + c.employee_name + '&lt;/strong&gt; (' + c.leave_type + ') — &lt;span class="text-secondary"&gt;' + c.date_range + '&lt;/span&gt;';
+                                  listEl.appendChild(li);
+                              });
+                              wrap.classList.remove('d-none');
+                          } else {
+                              wrap.classList.add('d-none');
+                              listEl.innerHTML = '';
+                          }
+                      }).catch(function(err) {
+                          console.error("Collision check error:", err);
+                      });
+                }
+
                 document.addEventListener('DOMContentLoaded', function() {
+                    ['leave_date_from', 'leave_date_to', 'is_half_day'].forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) {
+                            el.addEventListener('change', function() {
+                                checkTeamCollision('leave_date_from', 'leave_date_to', 'is_half_day', 'new_team_collision_warning', 'new_collision_dept_name', 'new_collision_list', null);
+                            });
+                        }
+                    });
+
+                    ['edit_leave_date_from', 'edit_leave_date_to', 'edit_is_half_day'].forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) {
+                            el.addEventListener('change', function() {
+                                var form = document.getElementById('editLeaveForm');
+                                var leaveId = form &amp;&amp; form.action ? form.action.split('/').pop() : null;
+                                checkTeamCollision('edit_leave_date_from', 'edit_leave_date_to', 'edit_is_half_day', 'edit_team_collision_warning', 'edit_collision_dept_name', 'edit_collision_list', leaveId);
+                            });
+                        }
+                    });
                     const form = document.querySelector('#newLeaveModal form');
                     if(form) {
                         form.addEventListener('submit', function(e) {
+                            if (!checkMandatoryAttachmentOnSubmit(this, 'holiday_status_id', 'leave_date_from', 'leave_date_to', 'is_half_day', 'attachment', false)) {
+                                e.preventDefault();
+                                e.stopImmediatePropagation();
+                                return false;
+                            }
                             e.preventDefault();
                             const formData = new FormData(form);
                             fetch(form.action, {
@@ -838,6 +1033,9 @@
                                 if (dateInputTo) {
                                     dateInputTo.value = info.dateStr;
                                 }
+                                if (typeof checkTeamCollision === 'function') {
+                                    checkTeamCollision('leave_date_from', 'leave_date_to', 'is_half_day', 'new_team_collision_warning', 'new_collision_dept_name', 'new_collision_list', null);
+                                }
                                 $('#newLeaveModal').modal('show');
                             },
                             eventClick: function(info) {
@@ -905,9 +1103,14 @@
                                         if (typeTitle) typeTitle.innerText = props.holiday_status_name || info.event.title;
                                         var badge = document.getElementById('view_leave_status_badge');
                                         if (badge) {
-                                            var st = props.state ? props.state.toUpperCase() : 'APPROVED';
-                                            badge.innerText = st;
-                                            badge.className = (props.state === 'validate') ? 'badge bg-success text-white' : (props.state === 'refuse' ? 'badge bg-danger text-white' : 'badge bg-warning text-white');
+                                            if (props.cancellation_requested) {
+                                                badge.innerText = 'APPROVED (CANCELLATION REQUESTED)';
+                                                badge.className = 'badge bg-warning text-dark';
+                                            } else {
+                                                var st = props.state ? props.state.toUpperCase() : 'APPROVED';
+                                                badge.innerText = st;
+                                                badge.className = (props.state === 'validate') ? 'badge bg-success text-white' : (props.state === 'refuse' ? 'badge bg-danger text-white' : 'badge bg-warning text-white');
+                                            }
                                         }
                                         var dtLabel = document.getElementById('view_leave_dates');
                                         if (dtLabel) dtLabel.innerText = (props.date_from_val || '') + ' to ' + (props.date_to_val || '');
@@ -932,6 +1135,43 @@
                                             } else {
                                                 attsWrap.classList.add('d-none');
                                                 attsList.innerHTML = '';
+                                            }
+                                        }
+
+                                        var cancelReasonWrap = document.getElementById('view_cancellation_reason_wrapper');
+                                        var cancelReasonDiv = document.getElementById('view_cancellation_reason');
+                                        if (cancelReasonWrap &amp;&amp; cancelReasonDiv) {
+                                            if (props.cancellation_requested &amp;&amp; props.cancellation_reason) {
+                                                cancelReasonDiv.innerText = props.cancellation_reason;
+                                                cancelReasonWrap.classList.remove('d-none');
+                                            } else {
+                                                cancelReasonWrap.classList.add('d-none');
+                                            }
+                                        }
+
+                                        var viewCancelBtn = document.getElementById('view_cancel_leave_btn');
+                                        if (viewCancelBtn) {
+                                            var isManager = <t t-esc="'true' if is_manager else 'false'"/>;
+                                            if (props.leave_id &amp;&amp; props.state !== 'refuse' &amp;&amp; (props.is_owner || isManager)) {
+                                                if (props.cancellation_requested) {
+                                                    viewCancelBtn.href = 'javascript:void(0);';
+                                                    viewCancelBtn.innerHTML = '<i class="fa fa-clock-o me-1"></i> Cancellation Pending Approval';
+                                                    viewCancelBtn.className = 'btn btn-outline-secondary disabled';
+                                                    viewCancelBtn.removeAttribute('onclick');
+                                                } else if (props.state === 'validate') {
+                                                    viewCancelBtn.href = 'javascript:void(0);';
+                                                    viewCancelBtn.innerHTML = '<i class="fa fa-times me-1"></i> Request Cancellation';
+                                                    viewCancelBtn.className = 'btn btn-outline-warning';
+                                                    viewCancelBtn.setAttribute('onclick', "var r=prompt('Please provide a reason for requesting cancellation of this approved leave:'); if(r!==null){ window.location.href='/my/leaves/cancel/" + props.leave_id + "?reason=' + encodeURIComponent(r); } return false;");
+                                                } else {
+                                                    viewCancelBtn.href = '/my/leaves/cancel/' + props.leave_id;
+                                                    viewCancelBtn.innerHTML = '<i class="fa fa-trash me-1"></i> Cancel Leave';
+                                                    viewCancelBtn.className = 'btn btn-outline-danger';
+                                                    viewCancelBtn.setAttribute('onclick', "return confirm('Are you sure you want to cancel this leave request?');");
+                                                }
+                                                viewCancelBtn.classList.remove('d-none');
+                                            } else {
+                                                viewCancelBtn.classList.add('d-none');
                                             }
                                         }
 
@@ -1011,6 +1251,16 @@
                                 dateToInput.setAttribute('required', '1');
                                 periodContainer.style.display = 'none';
                                 periodInput.removeAttribute('required');
+                            }
+                        });
+                    }
+                    var editForm = document.getElementById('editLeaveForm');
+                    if (editForm) {
+                        editForm.addEventListener('submit', function(e) {
+                            if (!checkMandatoryAttachmentOnSubmit(this, 'edit_holiday_status_id', 'edit_leave_date_from', 'edit_leave_date_to', 'edit_is_half_day', 'attachment', true)) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return false;
                             }
                         });
                     }

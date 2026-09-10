@@ -23,10 +23,13 @@
                     <div class="org-name">
                         <t t-esc="emp.name"/>
                         <t t-if="emp.attendance_state == 'checked_in'">
-                            <span class="badge bg-success rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0;" title="Checked In (Working)"></span>
+                            <span class="badge bg-success rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0; background-color: #10b981 !important;" title="🟢 Checked In (Currently Working)"></span>
+                        </t>
+                        <t t-elif="employees_on_leave_ids and emp.id in employees_on_leave_ids">
+                            <span class="badge bg-warning rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0; background-color: #f59e0b !important;" title="🟡 On Approved Leave Today"></span>
                         </t>
                         <t t-else="">
-                            <span class="badge bg-secondary rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0; opacity: 0.5;" title="Checked Out"></span>
+                            <span class="badge bg-secondary rounded-circle ms-1" style="width: 10px; height: 10px; display: inline-block; padding: 0; background-color: #94a3b8 !important; opacity: 0.7;" title="⚪ Checked Out"></span>
                         </t>
                     </div>
                     <t t-if="emp.work_email">
@@ -75,11 +78,30 @@
                         <div class="ess-hist-hero-title">
                             <i class="fa fa-sitemap"/> Team Directory
                         </div>
-                        <div class="ess-hist-hero-sub">Organization Chart</div>
+                        <div class="ess-hist-hero-sub">Organization Chart &amp; Live Presence</div>
                     </div>
                     <a href="/my/dashboard" class="ess-hist-back-btn ml-3">
                         <i class="fa fa-arrow-left"/> Dashboard
                     </a>
+                </div>
+            </div>
+
+            <!-- Presence Status Legend -->
+            <div class="container-fluid mb-3 px-4">
+                <div class="d-flex align-items-center justify-content-center gap-4 py-2 px-3 bg-white shadow-sm border" style="border-radius: 8px; font-size: 0.82rem;">
+                    <span class="fw-bold text-muted me-2">Presence Status:</span>
+                    <span class="d-inline-flex align-items-center">
+                        <span class="badge rounded-circle me-1" style="width: 10px; height: 10px; padding: 0; background-color: #10b981; display: inline-block;"></span>
+                        <strong class="text-dark">Checked In</strong> <span class="text-muted ms-1">(Currently Working)</span>
+                    </span>
+                    <span class="d-inline-flex align-items-center">
+                        <span class="badge rounded-circle me-1" style="width: 10px; height: 10px; padding: 0; background-color: #f59e0b; display: inline-block;"></span>
+                        <strong class="text-dark">On Leave</strong> <span class="text-muted ms-1">(Approved Leave Today)</span>
+                    </span>
+                    <span class="d-inline-flex align-items-center">
+                        <span class="badge rounded-circle me-1" style="width: 10px; height: 10px; padding: 0; background-color: #94a3b8; display: inline-block;"></span>
+                        <strong class="text-dark">Checked Out</strong> <span class="text-muted ms-1">(Off Duty)</span>
+                    </span>
                 </div>
             </div>
 

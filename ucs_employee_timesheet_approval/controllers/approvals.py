@@ -136,7 +136,7 @@ class TimesheetPortalApprovals(PortalApprovals):
                 
         return request.redirect('/my/approvals?tab=timesheet')
 
-    @http.route('/my/approvals/timesheet/bulk_action', type='json', auth="user", methods=['POST'], website=True, csrf=False)
+    @http.route('/my/approvals/timesheet/bulk_action', type='jsonrpc', auth="user", methods=['POST'], website=True, csrf=False)
     def portal_bulk_timesheet_action(self, action=None, timesheet_ids=None, reason='', **kw):
         user = request.env.user
         ts_ids = []

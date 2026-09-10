@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="report_monthly_attendance_card">
+        <t t-call="web.basic_layout">
+            <style>
+                .att-card-container {
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #1e293b;
+                    padding: 20px;
+                    font-size: 11px;
+                }
+                .att-card-header {
+                    border-bottom: 2px solid #4c1d95;
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                }
+                .att-company-title {
+                    font-size: 22px;
+                    font-weight: bold;
+                    color: #4c1d95;
+                    text-transform: uppercase;
+                    margin: 0;
+                }
+                .att-report-sub {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #64748b;
+                    margin-top: 4px;
+                }
+                .att-emp-grid {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    background-color: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                }
+                .att-emp-grid td {
+                    padding: 8px 12px;
+                    vertical-align: top;
+                }
+                .att-label {
+                    color: #64748b;
+                    font-weight: 600;
+                    font-size: 10px;
+                    text-transform: uppercase;
+                }
+                .att-val {
+                    color: #0f172a;
+                    font-weight: bold;
+                    font-size: 12px;
+                }
+                .att-summary-table {
+                    width: 100%;
+                    margin-bottom: 20px;
+                    border-collapse: collapse;
+                }
+                .att-summary-box {
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    padding: 10px;
+                    text-align: center;
+                    border-radius: 6px;
+                }
+                .att-summary-num {
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #4c1d95;
+                }
+                .att-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 30px;
+                }
+                .att-table th {
+                    background-color: #4c1d95;
+                    color: #ffffff;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    font-size: 9px;
+                    padding: 6px 8px;
+                    border: 1px solid #4c1d95;
+                    text-align: center;
+                }
+                .att-table td {
+                    padding: 5px 8px;
+                    border: 1px solid #e2e8f0;
+                    font-size: 10px;
+                    text-align: center;
+                }
+                .att-tr-even {
+                    background-color: #f8fafc;
+                }
+                .status-badge {
+                    display: inline-block;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    font-size: 9px;
+                }
+                .badge-present { background-color: #dcfce7; color: #15803d; }
+                .badge-shortfall { background-color: #fef3c7; color: #b45309; }
+                .badge-leave { background-color: #f3e8ff; color: #6b21a8; }
+                .badge-holiday { background-color: #e0f2fe; color: #0369a1; }
+                .badge-weekend { background-color: #f1f5f9; color: #64748b; }
+                .badge-absent { background-color: #fee2e2; color: #b91c1c; }
+                .signature-section {
+                    margin-top: 40px;
+                    width: 100%;
+                }
+                .sig-box {
+                    width: 30%;
+                    float: left;
+                    text-align: center;
+                    border-top: 1px solid #94a3b8;
+                    padding-top: 6px;
+                    font-weight: 600;
+                    color: #475569;
+                }
+            </style>
+
+            <div class="att-card-container">
+                <!-- Header -->
+                <div class="att-card-header">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td>
+                                <h1 class="att-company-title"><t t-esc="doc.company_id.name"/></h1>
+                                <div class="att-report-sub">OFFICIAL MONTHLY ATTENDANCE CARD - <t t-esc="summary['month_name']"/></div>
+                            </td>
+                            <td style="text-align: right;">
+                                <t t-if="doc.company_id.logo">
+                                    <img t-att-src="image_data_uri(doc.company_id.logo)" style="max-height: 50px;"/>
+                                </t>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Employee Details -->
+                <table class="att-emp-grid">
+                    <tr>
+                        <td style="width: 25%;">
+                            <div class="att-label">Employee Name</div>
+                            <div class="att-val"><t t-esc="doc.name"/></div>
+                        </td>
+                        <td style="width: 25%;">
+                            <div class="att-label">Job Title / Position</div>
+                            <div class="att-val"><t t-esc="doc.job_title or (doc.job_id and doc.job_id.name) or '-'"/></div>
+                        </td>
+                        <td style="width: 25%;">
+                            <div class="att-label">Department</div>
+                            <div class="att-val"><t t-esc="doc.department_id and doc.department_id.name or '-'"/></div>
+                        </td>
+                        <td style="width: 25%;">
+                            <div class="att-label">Work Schedule</div>
+                            <div class="att-val"><t t-esc="doc.resource_calendar_id and doc.resource_calendar_id.name or 'Standard Schedule'"/></div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Summary Cards -->
+                <table class="att-summary-table">
+                    <tr>
+                        <td style="width: 20%; padding: 4px;">
+                            <div class="att-summary-box">
+                                <div class="att-label">Working Days</div>
+                                <div class="att-summary-num"><t t-esc="summary['working_days']"/></div>
+                            </div>
+                        </td>
+                        <td style="width: 20%; padding: 4px;">
+                            <div class="att-summary-box">
+                                <div class="att-label">Days Present</div>
+                                <div class="att-summary-num" style="color: #16a34a;"><t t-esc="summary['present_days']"/></div>
+                            </div>
+                        </td>
+                        <td style="width: 20%; padding: 4px;">
+                            <div class="att-summary-box">
+                                <div class="att-label">Total Worked</div>
+                                <div class="att-summary-num" style="color: #2563eb;"><t t-esc="summary['tot_worked_str']"/></div>
+                            </div>
+                        </td>
+                        <td style="width: 20%; padding: 4px;">
+                            <div class="att-summary-box">
+                                <div class="att-label">Total Shortfall</div>
+                                <div class="att-summary-num" style="color: #dc2626;"><t t-esc="summary['tot_shortfall_str']"/></div>
+                            </div>
+                        </td>
+                        <td style="width: 20%; padding: 4px;">
+                            <div class="att-summary-box">
+                                <div class="att-label">Total Overtime</div>
+                                <div class="att-summary-num" style="color: #d97706;"><t t-esc="summary['tot_overtime_str']"/></div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Daily Breakdown Table -->
+                <table class="att-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">Date</th>
+                            <th style="width: 11%;">Day</th>
+                            <th style="width: 11%;">Check In</th>
+                            <th style="width: 11%;">Check Out</th>
+                            <th style="width: 11%;">Worked Hrs</th>
+                            <th style="width: 11%;">Target Hrs</th>
+                            <th style="width: 11%;">Shortfall</th>
+                            <th style="width: 11%;">Overtime</th>
+                            <th style="width: 11%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="daily_records" t-as="rec">
+                            <tr t-att-class="'att-tr-even' if rec_index % 2 == 1 else ''">
+                                <td><t t-esc="rec['day_str']"/></td>
+                                <td><t t-esc="rec['weekday_str']"/></td>
+                                <td><strong><t t-esc="rec['check_in']"/></strong></td>
+                                <td><strong><t t-esc="rec['check_out']"/></strong></td>
+                                <td style="color: #1e293b; font-weight: bold;"><t t-esc="rec['worked_hours_str']"/></td>
+                                <td><t t-esc="rec['target_hours_str']"/></td>
+                                <td style="color: #dc2626;"><t t-esc="rec['shortfall_hours_str']"/></td>
+                                <td style="color: #16a34a;"><t t-esc="rec['overtime_hours_str']"/></td>
+                                <td>
+                                    <span t-att-class="'status-badge ' + ('badge-present' if rec['status_code']=='PRESENT' else ('badge-shortfall' if rec['status_code']=='SHORTFALL' else ('badge-leave' if rec['status_code']=='LEAVE' else ('badge-holiday' if rec['status_code']=='HOLIDAY' else ('badge-weekend' if rec['status_code']=='WEEKEND' else 'badge-absent')))))">
+                                        <t t-esc="rec['status']"/>
+                                    </span>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <!-- Signatures -->
+                <div class="signature-section">
+                    <div class="sig-box" style="margin-right: 5%;">Employee Signature</div>
+                    <div class="sig-box" style="margin-right: 5%;">HR Manager Signature</div>
+                    <div class="sig-box">Company Seal / Stamp</div>
+                    <div style="clear: both;"/>
+                </div>
+
+            </div>
+        </t>
+    </template>
+
+</odoo>

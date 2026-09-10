@@ -47,6 +47,15 @@
                                                 <td class="font-weight-bold"><t t-esc="leave.request_date_to.strftime('%d/%m/%Y') if leave.request_date_to else ''"/></td>
                                                 <td>
                                                     <span class="badge badge-light text-primary"><t t-esc="leave.holiday_status_id.name"/></span>
+                                                    <t t-if="leave.name">
+                                                        <small class="text-muted d-block mt-1"><i class="fa fa-info-circle me-1"/> <t t-esc="leave.name"/></small>
+                                                    </t>
+                                                    <t t-if="leave.cancellation_requested and leave.cancellation_reason">
+                                                        <div class="p-2 mt-2 rounded border border-warning bg-warning-subtle text-dark small" style="background-color: #fff8e6; border-left: 3px solid #ffc107 !important;">
+                                                            <strong><i class="fa fa-commenting me-1"/> Cancellation Reason:</strong>
+                                                            <div class="font-italic text-dark mt-1" style="white-space: pre-wrap;"><t t-esc="leave.cancellation_reason"/></div>
+                                                        </div>
+                                                    </t>
                                                 </td>
                                                 <td>
                                                     <t t-if="leave.request_unit_hours or leave.holiday_status_id.request_unit == 'hour'">
@@ -76,7 +85,10 @@
                                                     </t>
                                                 </td>
                                                 <td>
-                                                    <t t-if="leave.state in ['validate', 'validate1']">
+                                                    <t t-if="leave.cancellation_requested">
+                                                        <span class="badge bg-warning text-dark"><i class="fa fa-exclamation-circle me-1"/> Cancellation Requested</span>
+                                                    </t>
+                                                    <t t-elif="leave.state in ['validate', 'validate1']">
                                                         <span class="badge bg-success text-white">Approved</span>
                                                     </t>
                                                     <t t-else="">
@@ -84,14 +96,24 @@
                                                     </t>
                                                 </td>
                                                 <td class="text-center">
-                                                    <t t-if="leave.state == 'confirm'">
-                                                        <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
-                                                            <i class="fa fa-check"/> Approve
+                                                    <t t-if="leave.cancellation_requested">
+                                                        <a t-attf-href="/my/approvals/cancellation/approve/{{ leave.id }}" class="btn btn-sm btn-danger mr-2" onclick="return confirm('Approve leave cancellation request? This will cancel the leave and restore the employee leave balance.');" title="Approve Cancellation">
+                                                            <i class="fa fa-check"/> Approve Cancellation
+                                                        </a>
+                                                        <a t-attf-href="/my/approvals/cancellation/reject/{{ leave.id }}" class="btn btn-sm btn-outline-secondary" onclick="return confirm('Reject cancellation request and keep leave approved?');" title="Reject Cancellation Request">
+                                                            <i class="fa fa-times"/> Reject Request
                                                         </a>
                                                     </t>
-                                                    <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse/reject this leave request?');" title="Refuse">
-                                                        <i class="fa fa-times"/> Refuse / Reject
-                                                    </a>
+                                                    <t t-else="">
+                                                        <t t-if="leave.state == 'confirm'">
+                                                            <a t-attf-href="/my/approvals/approve/{{ leave.id }}" class="btn btn-sm btn-success mr-2" onclick="return confirm('Are you sure you want to approve this leave request?');" title="Approve">
+                                                                <i class="fa fa-check"/> Approve
+                                                            </a>
+                                                        </t>
+                                                        <a t-attf-href="/my/approvals/refuse/{{ leave.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to refuse/reject this leave request?');" title="Refuse">
+                                                            <i class="fa fa-times"/> Refuse / Reject
+                                                        </a>
+                                                    </t>
                                                 </td>
                                             </tr>
                                         </t>

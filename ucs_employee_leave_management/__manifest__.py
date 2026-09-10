@@ -15,6 +15,7 @@
         'views/portal_templates.xml',
         'views/leaves_templates.xml',
         'views/approvals_templates.xml',
+        'views/hr_leave_type_views.xml',
     ],
     'installable': True,
     'application': False,
