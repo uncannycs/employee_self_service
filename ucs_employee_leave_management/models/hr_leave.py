@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError, UserError
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -7,6 +8,9 @@ _logger = logging.getLogger(__name__)
 class HrLeave(models.Model):
     """ Custom extension of hr.leave to automate emails and sync timesheet approval states. """
     _inherit = 'hr.leave'
+
+    cancellation_requested = fields.Boolean(string="Cancellation Requested", default=False)
+    cancellation_reason = fields.Text(string="Cancellation Reason")
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -25,6 +29,40 @@ class HrLeave(models.Model):
                     except Exception as e:
                         _logger.error("Failed to auto-approve created past leave %s: %s", leave.id, str(e))
         return leaves
+
+    @api.constrains('holiday_status_id', 'number_of_days', 'date_from', 'date_to', 'attachment_ids', 'supported_attachment_ids')
+    def _check_mandatory_attachment(self):
+        if self.env.context.get('skip_mandatory_attachment_check'):
+            return
+        for leave in self:
+            lt = leave.holiday_status_id
+            if not lt:
+                continue
+            is_sick = 'sick' in (lt.name or '').lower()
+            is_mandatory = getattr(lt, 'mandatory_attachment', False) or getattr(lt, 'support_document', False) or is_sick
+            raw_min = getattr(lt, 'mandatory_attachment_min_days', 2.0)
+            min_days = float(raw_min or 2.0)
+            
+            calendar_days = 0.5 if (getattr(leave, 'request_unit_half', False) or getattr(leave, 'request_unit_hours', False)) else (
+                (leave.request_date_to - leave.request_date_from).days + 1 if (leave.request_date_from and leave.request_date_to) else (
+                    (leave.date_to.date() - leave.date_from.date()).days + 1 if (leave.date_from and leave.date_to) else 0.0
+                )
+            )
+            duration = max(leave.number_of_days or 0.0, float(calendar_days))
+
+            if is_mandatory and duration > min_days:
+                atts = (
+                    (hasattr(leave, 'supported_attachment_ids') and leave.supported_attachment_ids) or
+                    (hasattr(leave, 'attachment_ids') and leave.attachment_ids) or
+                    self.env['ir.attachment'].sudo().search([
+                        ('res_model', '=', 'hr.leave'),
+                        ('res_id', '=', leave.id)
+                    ], limit=1)
+                )
+                if not atts:
+                    raise ValidationError(_(
+                        "Attachment is mandatory for '%s' when leave duration (%g days) exceeds %g days."
+                    ) % (lt.name, duration, min_days))
 
     def action_approve(self, *args, **kwargs):
         """ Override action_approve to send notification email to employee and mark generated timesheets approved. """
@@ -299,3 +337,83 @@ class HrLeave(models.Model):
             mail.send()
         except Exception as e:
             _logger.error("Failed to send Leave Refuse Email to Employee: %s", str(e))
+
+    def action_request_cancellation(self, reason=None):
+        for leave in self:
+            vals = {'cancellation_requested': True}
+            if reason:
+                vals['cancellation_reason'] = reason
+            leave.sudo().write(vals)
+            leave._send_leave_cancellation_request_email_to_manager()
+
+    def _send_leave_cancellation_request_email_to_manager(self):
+        self.ensure_one()
+        employee = self.employee_id
+        if not employee:
+            return
+        
+        manager = employee.parent_id.user_id
+        manager_email = (manager.email if manager else False) or (employee.parent_id.work_email if employee.parent_id else False)
+        if not manager_email:
+            return
+
+        date_from = self.request_date_from or (self.date_from.date() if self.date_from else '')
+        date_to = self.request_date_to or (self.date_to.date() if self.date_to else '')
+        leave_type = self.holiday_status_id.name or 'Leave'
+        duration = f"{self.number_of_days} Day(s)" if self.number_of_days else f"{self.number_of_hours} Hour(s)"
+
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        approval_url = f"{base_url}/my/approvals?tab=leave"
+
+        cancel_reason_str = self.cancellation_reason or 'No reason provided.'
+
+        subject = f"[Leave Cancellation Request] {employee.name} requested cancellation for {leave_type}"
+        body_html = f"""
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.6;">
+            <h3 style="color: #e67e22;">Leave Cancellation Request Received</h3>
+            <p>Dear <strong>{manager.name or 'Manager'}</strong>,</p>
+            <p>An employee has requested cancellation for an already approved leave request:</p>
+            <table style="border-collapse: collapse; width: 100%; max-width: 500px; margin: 15px 0;">
+                <tr style="background-color: #f8f9fa;">
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">Employee:</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{employee.name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">Leave Type:</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{leave_type}</td>
+                </tr>
+                <tr style="background-color: #f8f9fa;">
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">Duration:</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{date_from} to {date_to} ({duration})</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">Original Reason:</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{self.name or 'N/A'}</td>
+                </tr>
+                <tr style="background-color: #fff3cd;">
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #856404;">Cancellation Reason:</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; color: #856404; font-weight: bold;">{cancel_reason_str}</td>
+                </tr>
+            </table>
+            <p style="margin-top: 20px;">
+                <a href="{approval_url}" style="background-color: #e67e22; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    View & Approve Cancellation in Portal
+                </a>
+            </p>
+            <br/>
+            <p style="font-size: 12px; color: #777;">This is an automated notification from Employee Self Service Portal.</p>
+        </div>
+        """
+
+        try:
+            mail_values = {
+                'subject': subject,
+                'email_from': self.env.company.email or self.env.user.email_formatted or 'noreply@company.com',
+                'email_to': manager_email,
+                'body_html': body_html,
+                'state': 'outgoing',
+            }
+            mail = self.env['mail.mail'].sudo().create(mail_values)
+            mail.send()
+        except Exception as e:
+            _logger.error("Failed to send Leave Cancellation Request Email to Manager: %s", str(e))

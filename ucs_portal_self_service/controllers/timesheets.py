@@ -652,7 +652,7 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
         redirect_to = post.get('redirect_to', '/my/timesheets')
         return request.redirect(redirect_to)
 
-    @http.route('/my/timesheets/get_tasks_by_project', type='json', auth='user')
+    @http.route('/my/timesheets/get_tasks_by_project', type='jsonrpc', auth='user')
     def get_tasks_by_project(self, project_id, **kw):
         user = request.env.user
         project_id = int(project_id) if project_id else 0
@@ -662,7 +662,7 @@ class PortalCustomTimesheets(TimesheetCustomerPortal):
 
         return [{'id': t.id, 'name': t.name} for t in tasks]
 
-    @http.route('/my/timesheets/calendar_data', type='json', auth='user')
+    @http.route('/my/timesheets/calendar_data', type='jsonrpc', auth='user')
     def get_timesheet_calendar_data_route(self, year=None, month=None, employee_id=None, **kw):
         user = request.env.user
         try:
